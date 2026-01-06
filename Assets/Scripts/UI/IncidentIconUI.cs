@@ -24,6 +24,17 @@ namespace MonsterBattleGame
 
         private void Awake()
         {
+            // フィールドが設定されていない場合は自動的に取得
+            if (clickButton == null)
+            {
+                clickButton = GetComponent<Button>();
+            }
+
+            if (iconImage == null)
+            {
+                iconImage = GetComponent<Image>();
+            }
+
             if (clickButton != null)
             {
                 clickButton.onClick.AddListener(OnButtonClicked);

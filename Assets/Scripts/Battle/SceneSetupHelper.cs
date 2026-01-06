@@ -844,6 +844,102 @@ namespace MonsterBattleGame
             Debug.Log("Menu Bar created successfully!");
         }
 
+        [MenuItem("Setup/Create Incident UI", false, 50)]
+        public static void CreateIncidentUI()
+        {
+            // MenuCanvasの取得または作成
+            Canvas menuCanvas = null;
+            Canvas[] allCanvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var canvas in allCanvases)
+            {
+                if (canvas.name == "MenuCanvas")
+                {
+                    menuCanvas = canvas;
+                    break;
+                }
+            }
+
+            if (menuCanvas == null)
+            {
+                // MenuCanvasが存在しない場合は作成
+                GameObject menuCanvasObj = new GameObject("MenuCanvas");
+                menuCanvas = menuCanvasObj.AddComponent<Canvas>();
+                menuCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                menuCanvas.sortingOrder = 10; // 他のCanvasより前面に表示
+                menuCanvasObj.AddComponent<CanvasScaler>();
+                menuCanvasObj.AddComponent<GraphicRaycaster>();
+            }
+
+            // EventSystemの取得または作成
+            EventSystem eventSystem = FindFirstObjectByType<EventSystem>();
+            if (eventSystem == null)
+            {
+                GameObject eventSystemObj = new GameObject("EventSystem");
+                eventSystem = eventSystemObj.AddComponent<EventSystem>();
+                
+#if USE_INPUT_SYSTEM && ENABLE_INPUT_SYSTEM
+                if (eventSystemObj.GetComponent<InputSystemUIInputModule>() == null)
+                {
+                    eventSystemObj.AddComponent<InputSystemUIInputModule>();
+                }
+#endif
+            }
+            else
+            {
+                // 既存のEventSystemにInputSystemUIInputModuleがあるか確認
+#if USE_INPUT_SYSTEM && ENABLE_INPUT_SYSTEM
+                if (eventSystem.GetComponent<InputSystemUIInputModule>() == null)
+                {
+                    eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+                }
+#endif
+            }
+
+            // 既にIncidentUIが存在するかチェック
+            IncidentUI existingIncidentUI = FindFirstObjectByType<IncidentUI>();
+            if (existingIncidentUI != null)
+            {
+                Debug.LogWarning("IncidentUI already exists. Skipping creation.");
+                return;
+            }
+
+            // インシデントアイコンコンテナの作成
+            GameObject iconContainerObj = new GameObject("IncidentIconContainer");
+            iconContainerObj.transform.SetParent(menuCanvas.transform, false);
+            RectTransform iconContainerRect = iconContainerObj.AddComponent<RectTransform>();
+            
+            // 右下に配置（メニューバーのすぐ上）
+            // メニューバーの高さ: 90px、位置: y=45（中央）
+            // インシデントアイコンの位置: y = 90 + マージン（110px）、x = 画面右端からマージン（-20px）
+            iconContainerRect.anchorMin = new Vector2(1, 0);
+            iconContainerRect.anchorMax = new Vector2(1, 0);
+            iconContainerRect.pivot = new Vector2(1, 0); // 右下
+            iconContainerRect.sizeDelta = new Vector2(200, 100);
+            iconContainerRect.anchoredPosition = new Vector2(-20, 110);
+
+            // VerticalLayoutGroupを追加（アイコンを縦に並べる）
+            VerticalLayoutGroup layoutGroup = iconContainerObj.AddComponent<VerticalLayoutGroup>();
+            layoutGroup.childAlignment = TextAnchor.UpperRight;
+            layoutGroup.spacing = 10;
+            layoutGroup.padding = new RectOffset(10, 10, 10, 10);
+            layoutGroup.childControlWidth = false;
+            layoutGroup.childControlHeight = false;
+            layoutGroup.childForceExpandWidth = false;
+            layoutGroup.childForceExpandHeight = false;
+
+            // IncidentUIコンポーネントの作成
+            GameObject incidentUIObj = new GameObject("IncidentUI");
+            incidentUIObj.transform.SetParent(menuCanvas.transform, false);
+            IncidentUI incidentUI = incidentUIObj.AddComponent<IncidentUI>();
+
+            // リフレクションでiconContainerフィールドを設定
+            var incidentUIType = typeof(IncidentUI);
+            var iconContainerField = incidentUIType.GetField("iconContainer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            iconContainerField?.SetValue(incidentUI, iconContainerObj.transform);
+
+            Debug.Log("Incident UI created successfully!");
+        }
+
         [MenuItem("Setup/Create All Screen Canvases", false, 41)]
         public static void CreateAllScreenCanvases()
         {
