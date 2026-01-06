@@ -390,7 +390,7 @@ namespace MonsterBattleGame
         /// <summary>
         /// デフォルト構成で部員を作成
         /// </summary>
-        public static ClubMember CreateDefaultClubMember(Grade grade = Grade.FirstYear, int level = 10)
+        public static ClubMember CreateDefaultClubMember(Grade grade = Grade.FirstYear, int level = 10, string lastName = "", string firstName = "")
         {
             var iv = CreateAverageIV();
             var traits = new List<Trait> { GetTraitByName("なし") };
@@ -398,13 +398,29 @@ namespace MonsterBattleGame
             var history = new History();
             var skills = CreateDefaultSkillSet();
 
-            return new ClubMember(grade, level, iv, traits, personality, history, skills);
+            // 部員の名前が指定されている場合、ClubMemberSpeciesを作成
+            ClubMemberSpecies species = null;
+            if (!string.IsNullOrEmpty(lastName) || !string.IsNullOrEmpty(firstName))
+            {
+                string fullName = string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName) 
+                    ? "部員" 
+                    : $"{lastName} {firstName}".Trim();
+                species = new ClubMemberSpecies(fullName, 100, 50, 50, 50);
+            }
+
+            var member = new ClubMember(grade, level, iv, traits, personality, history, skills, lastName, firstName);
+            if (species != null)
+            {
+                member.Species = species;
+            }
+
+            return member;
         }
 
         /// <summary>
         /// ランダム構成で部員を作成
         /// </summary>
-        public static ClubMember CreateRandomClubMember(int level = 10)
+        public static ClubMember CreateRandomClubMember(int level = 10, string lastName = "", string firstName = "")
         {
             // ランダムな学年を選択
             var grades = new[] { Grade.FirstYear, Grade.SecondYear, Grade.ThirdYear };
@@ -444,7 +460,23 @@ namespace MonsterBattleGame
                 }
             }
 
-            return new ClubMember(grade, level, iv, traits, personality, history, skills);
+            // 部員の名前が指定されている場合、ClubMemberSpeciesを作成
+            ClubMemberSpecies species = null;
+            if (!string.IsNullOrEmpty(lastName) || !string.IsNullOrEmpty(firstName))
+            {
+                string fullName = string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName) 
+                    ? "部員" 
+                    : $"{lastName} {firstName}".Trim();
+                species = new ClubMemberSpecies(fullName, 100, 50, 50, 50);
+            }
+
+            var member = new ClubMember(grade, level, iv, traits, personality, history, skills, lastName, firstName);
+            if (species != null)
+            {
+                member.Species = species;
+            }
+
+            return member;
         }
 
         #endregion

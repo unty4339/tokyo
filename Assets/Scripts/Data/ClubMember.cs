@@ -12,6 +12,25 @@ namespace MonsterBattleGame
         /// <summary>種別への参照（種族値）</summary>
         public ClubMemberSpecies Species { get; set; }
 
+        /// <summary>苗字</summary>
+        public string LastName { get; set; }
+
+        /// <summary>名前</summary>
+        public string FirstName { get; set; }
+
+        /// <summary>全名（苗字 + 名前）</summary>
+        public string FullName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(LastName) && string.IsNullOrEmpty(FirstName))
+                {
+                    return "無名の部員";
+                }
+                return $"{LastName} {FirstName}";
+            }
+        }
+
         /// <summary>学年</summary>
         public Grade Grade { get; set; }
 
@@ -51,6 +70,8 @@ namespace MonsterBattleGame
         public ClubMember()
         {
             Level = 1;
+            LastName = string.Empty;
+            FirstName = string.Empty;
             IV = new IndividualValue();
             EV = new EffortValue();
             Personality = new Personality();
@@ -58,11 +79,13 @@ namespace MonsterBattleGame
             Skills = new List<Skill>();
         }
 
-        public ClubMember(ClubMemberSpecies species, Grade grade, int level, IndividualValue iv, EffortValue ev, Personality personality, List<Trait> traits, History history, List<Skill> skills)
+        public ClubMember(ClubMemberSpecies species, Grade grade, int level, IndividualValue iv, EffortValue ev, Personality personality, List<Trait> traits, History history, List<Skill> skills, string lastName = "", string firstName = "")
         {
             Species = species;
             Grade = grade;
             Level = level;
+            LastName = lastName ?? string.Empty;
+            FirstName = firstName ?? string.Empty;
             IV = iv ?? new IndividualValue();
             EV = ev ?? new EffortValue();
             Personality = personality ?? new Personality();
@@ -73,10 +96,12 @@ namespace MonsterBattleGame
         }
 
         // 後方互換性のためのコンストラクタ（既存コードとの互換性）
-        public ClubMember(Grade grade, int level, IndividualValue iv, List<Trait> traits, Personality personality, History history, List<Skill> skills)
+        public ClubMember(Grade grade, int level, IndividualValue iv, List<Trait> traits, Personality personality, History history, List<Skill> skills, string lastName = "", string firstName = "")
         {
             Grade = grade;
             Level = level;
+            LastName = lastName ?? string.Empty;
+            FirstName = firstName ?? string.Empty;
             IV = iv ?? new IndividualValue();
             EV = new EffortValue();
             Personality = personality ?? new Personality();

@@ -356,19 +356,67 @@ namespace MonsterBattleGame
             Debug.Log("Test Controller created successfully!");
         }
 
-        [MenuItem("Setup/Create Time System UI", false, 20)]
-        public static void CreateTimeSystemUI()
+        [MenuItem("Setup/Add Dummy Members Button", false, 30)]
+        public static void CreateAddDummyMembersButton()
         {
-            // Canvasの取得または作成
+            // Canvasの取得
             Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null)
             {
-                GameObject canvasObj = new GameObject("Canvas");
-                canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvasObj.AddComponent<CanvasScaler>();
-                canvasObj.AddComponent<GraphicRaycaster>();
+                Debug.LogWarning("Canvas not found. Please create Canvas first.");
+                return;
             }
+
+            // ダミー部員追加ボタンの作成
+            GameObject buttonObj = new GameObject("AddDummyMembersButton");
+            buttonObj.transform.SetParent(canvas.transform, false);
+
+            Image buttonImage = buttonObj.AddComponent<Image>();
+            buttonImage.color = new Color(0.4f, 0.4f, 0.8f, 1f);
+
+            Button button = buttonObj.AddComponent<Button>();
+
+            RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
+            buttonRect.anchorMin = new Vector2(0, 1);
+            buttonRect.anchorMax = new Vector2(0, 1);
+            buttonRect.sizeDelta = new Vector2(200, 50);
+            buttonRect.anchoredPosition = new Vector2(100, -100);
+
+            GameObject buttonTextObj = new GameObject("Text");
+            buttonTextObj.transform.SetParent(buttonObj.transform, false);
+            Text buttonText = buttonTextObj.AddComponent<Text>();
+            buttonText.text = "ダミー部員追加";
+            buttonText.font = GetFont();
+            buttonText.fontSize = 18;
+            buttonText.alignment = TextAnchor.MiddleCenter;
+            buttonText.color = Color.white;
+
+            RectTransform buttonTextRect = buttonTextObj.GetComponent<RectTransform>();
+            buttonTextRect.anchorMin = Vector2.zero;
+            buttonTextRect.anchorMax = Vector2.one;
+            buttonTextRect.sizeDelta = Vector2.zero;
+
+            // AddDummyMemberControllerコンポーネントを追加
+            AddDummyMemberController controller = buttonObj.AddComponent<AddDummyMemberController>();
+
+            // リフレクションでフィールドを設定
+            var controllerType = typeof(AddDummyMemberController);
+            var buttonField = controllerType.GetField("addButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            buttonField?.SetValue(controller, button);
+
+            Debug.Log("Add Dummy Members Button created successfully!");
+        }
+
+        [MenuItem("Setup/Create Club Member List UI", false, 31)]
+        public static void CreateClubMemberListUI()
+        {
+            // 別キャンバスを作成
+            GameObject canvasObj = new GameObject("ClubMemberListCanvas");
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 1; // 戦闘ウィンドウより前面に表示
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
 
             // EventSystemの取得または作成
             EventSystem eventSystem = FindFirstObjectByType<EventSystem>();
@@ -384,183 +432,711 @@ namespace MonsterBattleGame
                 }
 #endif
             }
-            else
+
+            // 部員一覧ウィンドウの作成
+            GameObject listWindow = new GameObject("ClubMemberListWindow");
+            listWindow.transform.SetParent(canvas.transform, false);
+            RectTransform listWindowRect = listWindow.AddComponent<RectTransform>();
+            listWindowRect.anchorMin = new Vector2(0.5f, 0.5f);
+            listWindowRect.anchorMax = new Vector2(0.5f, 0.5f);
+            listWindowRect.sizeDelta = new Vector2(900, 700);
+            listWindowRect.anchoredPosition = Vector2.zero;
+
+            Image listWindowImage = listWindow.AddComponent<Image>();
+            listWindowImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
+
+            // タイトルテキスト
+            GameObject titleObj = new GameObject("TitleText");
+            titleObj.transform.SetParent(listWindow.transform, false);
+            Text titleText = titleObj.AddComponent<Text>();
+            titleText.text = "部員一覧";
+            titleText.font = GetFont();
+            titleText.fontSize = 24;
+            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.color = Color.white;
+
+            RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0, 1);
+            titleRect.anchorMax = new Vector2(1, 1);
+            titleRect.sizeDelta = new Vector2(0, 40);
+            titleRect.anchoredPosition = new Vector2(0, -20);
+
+            // スクロールビューエリア（Viewport）
+            GameObject scrollArea = new GameObject("ScrollArea");
+            scrollArea.transform.SetParent(listWindow.transform, false);
+            RectTransform scrollRect = scrollArea.AddComponent<RectTransform>();
+            scrollRect.anchorMin = new Vector2(0, 0);
+            scrollRect.anchorMax = new Vector2(1, 1);
+            scrollRect.sizeDelta = Vector2.zero;
+            scrollRect.offsetMin = new Vector2(10, 60);
+            scrollRect.offsetMax = new Vector2(-10, -60);
+
+            Image scrollAreaImage = scrollArea.AddComponent<Image>();
+            scrollAreaImage.color = new Color(0, 0, 0, 0.3f);
+
+            Mask viewportMask = scrollArea.AddComponent<Mask>();
+            viewportMask.showMaskGraphic = false;
+
+            // グリッドエリア（Content）
+            GameObject gridArea = new GameObject("MemberGridArea");
+            gridArea.transform.SetParent(scrollArea.transform, false);
+            RectTransform gridRect = gridArea.AddComponent<RectTransform>();
+            gridRect.anchorMin = new Vector2(0, 1);
+            gridRect.anchorMax = new Vector2(1, 1);
+            gridRect.pivot = new Vector2(0.5f, 1);
+            gridRect.sizeDelta = new Vector2(0, 0);
+            gridRect.anchoredPosition = Vector2.zero;
+
+            GridLayoutGroup gridLayout = gridArea.AddComponent<GridLayoutGroup>();
+            gridLayout.cellSize = new Vector2(150, 100);
+            gridLayout.spacing = new Vector2(10, 10);
+            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gridLayout.constraintCount = 5;
+            gridLayout.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            gridLayout.startAxis = GridLayoutGroup.Axis.Horizontal;
+            gridLayout.childAlignment = TextAnchor.UpperLeft;
+            gridLayout.padding = new RectOffset(10, 10, 10, 10);
+
+            ContentSizeFitter contentSizeFitter = gridArea.AddComponent<ContentSizeFitter>();
+            contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            contentSizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+            // ScrollRectコンポーネントを追加
+            ScrollRect scrollRectComponent = scrollArea.AddComponent<ScrollRect>();
+            scrollRectComponent.content = gridRect;
+            scrollRectComponent.viewport = scrollRect;
+            scrollRectComponent.horizontal = false;
+            scrollRectComponent.vertical = true;
+            scrollRectComponent.movementType = ScrollRect.MovementType.Elastic;
+            scrollRectComponent.elasticity = 0.1f;
+            scrollRectComponent.inertia = true;
+            scrollRectComponent.decelerationRate = 0.135f;
+            scrollRectComponent.scrollSensitivity = 1.0f;
+
+            // 閉じるボタン
+            GameObject closeButtonObj = new GameObject("CloseButton");
+            closeButtonObj.transform.SetParent(listWindow.transform, false);
+            Image closeButtonImage = closeButtonObj.AddComponent<Image>();
+            closeButtonImage.color = new Color(0.5f, 0.2f, 0.2f, 1f);
+
+            Button closeButton = closeButtonObj.AddComponent<Button>();
+
+            RectTransform closeRect = closeButtonObj.GetComponent<RectTransform>();
+            closeRect.anchorMin = new Vector2(0.5f, 0);
+            closeRect.anchorMax = new Vector2(0.5f, 0);
+            closeRect.sizeDelta = new Vector2(150, 40);
+            closeRect.anchoredPosition = new Vector2(0, 20);
+
+            GameObject closeTextObj = new GameObject("Text");
+            closeTextObj.transform.SetParent(closeButtonObj.transform, false);
+            Text closeText = closeTextObj.AddComponent<Text>();
+            closeText.text = "閉じる";
+            closeText.font = GetFont();
+            closeText.fontSize = 18;
+            closeText.alignment = TextAnchor.MiddleCenter;
+            closeText.color = Color.white;
+
+            RectTransform closeTextRect = closeTextObj.GetComponent<RectTransform>();
+            closeTextRect.anchorMin = Vector2.zero;
+            closeTextRect.anchorMax = Vector2.one;
+            closeTextRect.sizeDelta = Vector2.zero;
+
+            // ClubMemberListUIコンポーネントを追加
+            ClubMemberListUI listUI = listWindow.AddComponent<ClubMemberListUI>();
+
+            // リフレクションでフィールドを設定
+            var listUIType = typeof(ClubMemberListUI);
+            var listWindowField = listUIType.GetField("listWindow", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            listWindowField?.SetValue(listUI, listWindow);
+
+            var memberGridAreaField = listUIType.GetField("memberGridArea", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            memberGridAreaField?.SetValue(listUI, gridArea.transform);
+
+            var closeButtonField = listUIType.GetField("closeButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            closeButtonField?.SetValue(listUI, closeButton);
+
+            // 閉じるボタンでホーム画面に戻るように設定
+            closeButton.onClick.AddListener(() =>
             {
-#if USE_INPUT_SYSTEM && ENABLE_INPUT_SYSTEM
-                if (eventSystem.GetComponent<InputSystemUIInputModule>() == null)
+                ScreenManager screenManager = ScreenManager.Instance;
+                if (screenManager != null)
                 {
-                    eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+                    screenManager.SwitchToScreen(ScreenManager.ScreenType.Home);
+                }
+            });
+
+            // 初期状態では非表示
+            canvas.gameObject.SetActive(false);
+
+            // ScreenManagerに登録
+            ScreenManager screenManagerInstance = ScreenManager.Instance;
+            screenManagerInstance.RegisterCanvas(ScreenManager.ScreenType.MemberList, canvas);
+
+            Debug.Log("Club Member List UI created successfully!");
+        }
+
+        [MenuItem("Setup/Create Menu Bar", false, 40)]
+        public static void CreateMenuBar()
+        {
+            // MenuCanvasの作成
+            GameObject menuCanvasObj = new GameObject("MenuCanvas");
+            Canvas menuCanvas = menuCanvasObj.AddComponent<Canvas>();
+            menuCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            menuCanvas.sortingOrder = 10; // 他のCanvasより前面に表示
+            menuCanvasObj.AddComponent<CanvasScaler>();
+            menuCanvasObj.AddComponent<GraphicRaycaster>();
+
+            // EventSystemの取得または作成
+            EventSystem eventSystem = FindFirstObjectByType<EventSystem>();
+            if (eventSystem == null)
+            {
+                GameObject eventSystemObj = new GameObject("EventSystem");
+                eventSystem = eventSystemObj.AddComponent<EventSystem>();
+                
+#if USE_INPUT_SYSTEM && ENABLE_INPUT_SYSTEM
+                if (eventSystemObj.GetComponent<InputSystemUIInputModule>() == null)
+                {
+                    eventSystemObj.AddComponent<InputSystemUIInputModule>();
                 }
 #endif
             }
 
-            // 時間システムウィンドウの作成
-            GameObject timeWindow = new GameObject("TimeSystemWindow");
-            timeWindow.transform.SetParent(canvas.transform, false);
-            RectTransform timeWindowRect = timeWindow.AddComponent<RectTransform>();
-            timeWindowRect.anchorMin = new Vector2(0, 1);
-            timeWindowRect.anchorMax = new Vector2(0, 1);
-            timeWindowRect.sizeDelta = new Vector2(300, 150);
-            timeWindowRect.anchoredPosition = new Vector2(150, -75);
+            // メニューバーの背景
+            GameObject menuBarObj = new GameObject("MenuBar");
+            menuBarObj.transform.SetParent(menuCanvas.transform, false);
+            RectTransform menuBarRect = menuBarObj.AddComponent<RectTransform>();
+            menuBarRect.anchorMin = new Vector2(0, 0);
+            menuBarRect.anchorMax = new Vector2(1, 0);
+            menuBarRect.sizeDelta = new Vector2(0, 90);
+            menuBarRect.anchoredPosition = new Vector2(0, 45);
 
-            Image timeWindowImage = timeWindow.AddComponent<Image>();
-            timeWindowImage.color = new Color(0.2f, 0.2f, 0.2f, 0.9f);
+            Image menuBarImage = menuBarObj.AddComponent<Image>();
+            menuBarImage.color = new Color(0.15f, 0.15f, 0.15f, 0.95f);
 
-            // 時間表示テキスト
-            GameObject timeTextObj = new GameObject("TimeText");
-            timeTextObj.transform.SetParent(timeWindow.transform, false);
-            Text timeText = timeTextObj.AddComponent<Text>();
-            timeText.text = "1年目 1月 1週";
-            timeText.font = GetFont();
-            timeText.fontSize = 20;
-            timeText.alignment = TextAnchor.MiddleCenter;
-            timeText.color = Color.white;
+            // 水平レイアウトグループ
+            HorizontalLayoutGroup menuBarLayout = menuBarObj.AddComponent<HorizontalLayoutGroup>();
+            menuBarLayout.spacing = 10;
+            menuBarLayout.padding = new RectOffset(10, 10, 10, 10);
+            menuBarLayout.childAlignment = TextAnchor.MiddleLeft;
+            menuBarLayout.childControlWidth = false;
+            menuBarLayout.childControlHeight = true;
+            menuBarLayout.childForceExpandWidth = false;
+            menuBarLayout.childForceExpandHeight = true;
 
-            RectTransform timeTextRect = timeTextObj.GetComponent<RectTransform>();
-            timeTextRect.anchorMin = new Vector2(0, 0.5f);
-            timeTextRect.anchorMax = new Vector2(1, 1);
-            timeTextRect.sizeDelta = Vector2.zero;
-            timeTextRect.offsetMin = new Vector2(10, 10);
-            timeTextRect.offsetMax = new Vector2(-10, -10);
+            // 1. 評判・資金表示エリア
+            GameObject resourceAreaObj = new GameObject("ResourceArea");
+            resourceAreaObj.transform.SetParent(menuBarObj.transform, false);
+            RectTransform resourceAreaRect = resourceAreaObj.AddComponent<RectTransform>();
+            resourceAreaRect.sizeDelta = new Vector2(160, 0);
 
-            // ボタンエリア
-            GameObject buttonArea = new GameObject("ButtonArea");
-            buttonArea.transform.SetParent(timeWindow.transform, false);
-            RectTransform buttonAreaRect = buttonArea.AddComponent<RectTransform>();
-            buttonAreaRect.anchorMin = new Vector2(0, 0);
-            buttonAreaRect.anchorMax = new Vector2(1, 0.5f);
-            buttonAreaRect.sizeDelta = Vector2.zero;
-            buttonAreaRect.offsetMin = new Vector2(10, 10);
-            buttonAreaRect.offsetMax = new Vector2(-10, -10);
+            HorizontalLayoutGroup resourceLayout = resourceAreaObj.AddComponent<HorizontalLayoutGroup>();
+            resourceLayout.spacing = 5;
+            resourceLayout.padding = new RectOffset(10, 10, 0, 0);
+            resourceLayout.childAlignment = TextAnchor.MiddleLeft;
+            resourceLayout.childControlWidth = false;
+            resourceLayout.childControlHeight = false;
+            resourceLayout.childForceExpandWidth = false;
+            resourceLayout.childForceExpandHeight = false;
 
-            HorizontalLayoutGroup buttonLayout = buttonArea.AddComponent<HorizontalLayoutGroup>();
-            buttonLayout.spacing = 10;
-            buttonLayout.padding = new RectOffset(10, 10, 10, 10);
-            buttonLayout.childAlignment = TextAnchor.MiddleCenter;
-            buttonLayout.childControlWidth = true;
-            buttonLayout.childControlHeight = true;
-            buttonLayout.childForceExpandWidth = true;
-            buttonLayout.childForceExpandHeight = true;
+            // 評判表示
+            GameObject reputationObj = new GameObject("ReputationText");
+            reputationObj.transform.SetParent(resourceAreaObj.transform, false);
+            Text reputationText = reputationObj.AddComponent<Text>();
+            reputationText.text = "評判: 0";
+            reputationText.font = GetFont();
+            reputationText.fontSize = 16;
+            reputationText.alignment = TextAnchor.MiddleLeft;
+            reputationText.color = Color.white;
 
-            // ポーズボタン（0倍）
-            GameObject pauseButtonObj = new GameObject("PauseButton");
-            pauseButtonObj.transform.SetParent(buttonArea.transform, false);
-            Image pauseButtonImage = pauseButtonObj.AddComponent<Image>();
-            pauseButtonImage.color = new Color(0.5f, 0.7f, 0.5f, 1f);
+            RectTransform reputationRect = reputationObj.GetComponent<RectTransform>();
+            reputationRect.sizeDelta = new Vector2(60, 30);
 
-            Button pauseButton = pauseButtonObj.AddComponent<Button>();
+            // 資金表示
+            GameObject moneyObj = new GameObject("MoneyText");
+            moneyObj.transform.SetParent(resourceAreaObj.transform, false);
+            Text moneyText = moneyObj.AddComponent<Text>();
+            moneyText.text = "資金: 0円";
+            moneyText.font = GetFont();
+            moneyText.fontSize = 16;
+            moneyText.alignment = TextAnchor.MiddleLeft;
+            moneyText.color = Color.white;
 
-            GameObject pauseTextObj = new GameObject("Text");
-            pauseTextObj.transform.SetParent(pauseButtonObj.transform, false);
-            Text pauseText = pauseTextObj.AddComponent<Text>();
-            pauseText.text = "ポーズ";
-            pauseText.font = GetFont();
-            pauseText.fontSize = 14;
-            pauseText.alignment = TextAnchor.MiddleCenter;
-            pauseText.color = Color.white;
+            RectTransform moneyRect = moneyObj.GetComponent<RectTransform>();
+            moneyRect.sizeDelta = new Vector2(90, 30);
 
-            RectTransform pauseTextRect = pauseTextObj.GetComponent<RectTransform>();
-            pauseTextRect.anchorMin = Vector2.zero;
-            pauseTextRect.anchorMax = Vector2.one;
-            pauseTextRect.sizeDelta = Vector2.zero;
+            // 2. 画面遷移ボタンエリア
+            GameObject buttonAreaObj = new GameObject("ButtonArea");
+            buttonAreaObj.transform.SetParent(menuBarObj.transform, false);
+            RectTransform buttonAreaRect = buttonAreaObj.AddComponent<RectTransform>();
+            buttonAreaRect.sizeDelta = new Vector2(600, 0);
 
-            // 1倍速ボタン
-            GameObject speed1xButtonObj = new GameObject("Speed1xButton");
-            speed1xButtonObj.transform.SetParent(buttonArea.transform, false);
-            Image speed1xButtonImage = speed1xButtonObj.AddComponent<Image>();
-            speed1xButtonImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+            HorizontalLayoutGroup buttonAreaLayout = buttonAreaObj.AddComponent<HorizontalLayoutGroup>();
+            buttonAreaLayout.spacing = 5;
+            buttonAreaLayout.padding = new RectOffset(10, 10, 0, 0);
+            buttonAreaLayout.childAlignment = TextAnchor.MiddleLeft;
+            buttonAreaLayout.childControlWidth = false;
+            buttonAreaLayout.childControlHeight = true;
+            buttonAreaLayout.childForceExpandWidth = false;
+            buttonAreaLayout.childForceExpandHeight = true;
 
-            Button speed1xButton = speed1xButtonObj.AddComponent<Button>();
-
-            GameObject speed1xTextObj = new GameObject("Text");
-            speed1xTextObj.transform.SetParent(speed1xButtonObj.transform, false);
-            Text speed1xText = speed1xTextObj.AddComponent<Text>();
-            speed1xText.text = "1倍";
-            speed1xText.font = GetFont();
-            speed1xText.fontSize = 14;
-            speed1xText.alignment = TextAnchor.MiddleCenter;
-            speed1xText.color = Color.white;
-
-            RectTransform speed1xTextRect = speed1xTextObj.GetComponent<RectTransform>();
-            speed1xTextRect.anchorMin = Vector2.zero;
-            speed1xTextRect.anchorMax = Vector2.one;
-            speed1xTextRect.sizeDelta = Vector2.zero;
-
-            // 2倍速ボタン
-            GameObject speed2xButtonObj = new GameObject("Speed2xButton");
-            speed2xButtonObj.transform.SetParent(buttonArea.transform, false);
-            Image speed2xButtonImage = speed2xButtonObj.AddComponent<Image>();
-            speed2xButtonImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
-
-            Button speed2xButton = speed2xButtonObj.AddComponent<Button>();
-
-            GameObject speed2xTextObj = new GameObject("Text");
-            speed2xTextObj.transform.SetParent(speed2xButtonObj.transform, false);
-            Text speed2xText = speed2xTextObj.AddComponent<Text>();
-            speed2xText.text = "2倍";
-            speed2xText.font = GetFont();
-            speed2xText.fontSize = 14;
-            speed2xText.alignment = TextAnchor.MiddleCenter;
-            speed2xText.color = Color.white;
-
-            RectTransform speed2xTextRect = speed2xTextObj.GetComponent<RectTransform>();
-            speed2xTextRect.anchorMin = Vector2.zero;
-            speed2xTextRect.anchorMax = Vector2.one;
-            speed2xTextRect.sizeDelta = Vector2.zero;
-
-            // 3倍速ボタン
-            GameObject speed3xButtonObj = new GameObject("Speed3xButton");
-            speed3xButtonObj.transform.SetParent(buttonArea.transform, false);
-            Image speed3xButtonImage = speed3xButtonObj.AddComponent<Image>();
-            speed3xButtonImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
-
-            Button speed3xButton = speed3xButtonObj.AddComponent<Button>();
-
-            GameObject speed3xTextObj = new GameObject("Text");
-            speed3xTextObj.transform.SetParent(speed3xButtonObj.transform, false);
-            Text speed3xText = speed3xTextObj.AddComponent<Text>();
-            speed3xText.text = "3倍";
-            speed3xText.font = GetFont();
-            speed3xText.fontSize = 14;
-            speed3xText.alignment = TextAnchor.MiddleCenter;
-            speed3xText.color = Color.white;
-
-            RectTransform speed3xTextRect = speed3xTextObj.GetComponent<RectTransform>();
-            speed3xTextRect.anchorMin = Vector2.zero;
-            speed3xTextRect.anchorMax = Vector2.one;
-            speed3xTextRect.sizeDelta = Vector2.zero;
-
-            // GameTimeUIコンポーネントを追加（型を動的に取得）
-            System.Type timeUIType = System.Type.GetType("MonsterBattleGame.GameTimeUI, Assembly-CSharp");
-            if (timeUIType == null)
+            // 画面遷移ボタンを作成する関数
+            Button CreateScreenButton(string buttonName, string buttonText, Vector2 size)
             {
-                // フォールバック: 名前空間なしで検索
-                timeUIType = System.Type.GetType("GameTimeUI");
-            }
-            
-            if (timeUIType == null)
-            {
-                Debug.LogError("GameTimeUI type not found!");
-                return;
+                GameObject buttonObj = new GameObject(buttonName);
+                buttonObj.transform.SetParent(buttonAreaObj.transform, false);
+                Image buttonImage = buttonObj.AddComponent<Image>();
+                buttonImage.color = new Color(0.3f, 0.3f, 0.5f, 1f);
+
+                Button button = buttonObj.AddComponent<Button>();
+
+                RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
+                buttonRect.sizeDelta = size;
+
+                GameObject textObj = new GameObject("Text");
+                textObj.transform.SetParent(buttonObj.transform, false);
+                Text text = textObj.AddComponent<Text>();
+                text.text = buttonText;
+                text.font = GetFont();
+                text.fontSize = 14;
+                text.alignment = TextAnchor.MiddleCenter;
+                text.color = Color.white;
+
+                RectTransform textRect = textObj.GetComponent<RectTransform>();
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.sizeDelta = Vector2.zero;
+
+                return button;
             }
 
-            Component timeUI = timeWindow.AddComponent(timeUIType);
-            var timeTextField = timeUIType.GetField("timeText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            timeTextField?.SetValue(timeUI, timeText);
+            Vector2 buttonSize = new Vector2(80, 40);
 
-            var pauseButtonField = timeUIType.GetField("pauseButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            pauseButtonField?.SetValue(timeUI, pauseButton);
+            Button homeButton = CreateScreenButton("HomeButton", "ホーム", buttonSize);
+            Button clubPolicyButton = CreateScreenButton("ClubPolicyButton", "部活方針", buttonSize);
+            Button memberListButton = CreateScreenButton("MemberListButton", "部員一覧", buttonSize);
+            Button itemButton = CreateScreenButton("ItemButton", "アイテム", buttonSize);
+            Button researchButton = CreateScreenButton("ResearchButton", "研究開発", buttonSize);
+            Button achievementButton = CreateScreenButton("AchievementButton", "実績", buttonSize);
+            Button systemButton = CreateScreenButton("SystemButton", "システム", buttonSize);
 
-            var speed1xButtonField = timeUIType.GetField("speed1xButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            speed1xButtonField?.SetValue(timeUI, speed1xButton);
+            // 3. 日付表示エリア
+            GameObject dateAreaObj = new GameObject("DateArea");
+            dateAreaObj.transform.SetParent(menuBarObj.transform, false);
+            RectTransform dateAreaRect = dateAreaObj.AddComponent<RectTransform>();
+            dateAreaRect.sizeDelta = new Vector2(60, 0);
 
-            var speed2xButtonField = timeUIType.GetField("speed2xButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            speed2xButtonField?.SetValue(timeUI, speed2xButton);
+            GameObject dateObj = new GameObject("DateText");
+            dateObj.transform.SetParent(dateAreaObj.transform, false);
+            Text dateText = dateObj.AddComponent<Text>();
+            dateText.text = "1年目 1月 1週";
+            dateText.font = GetFont();
+            dateText.fontSize = 16;
+            dateText.alignment = TextAnchor.MiddleCenter;
+            dateText.color = Color.white;
 
-            var speed3xButtonField = timeUIType.GetField("speed3xButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            speed3xButtonField?.SetValue(timeUI, speed3xButton);
+            RectTransform dateRect = dateObj.GetComponent<RectTransform>();
+            dateRect.anchorMin = Vector2.zero;
+            dateRect.anchorMax = Vector2.one;
+            dateRect.sizeDelta = Vector2.zero;
+            dateRect.offsetMin = new Vector2(5, 0);
+            dateRect.offsetMax = new Vector2(-5, 0);
 
-            Debug.Log("Time System UI created successfully!");
+            // 4. 時間経過スケール変更ボタンエリア
+            GameObject timeScaleAreaObj = new GameObject("TimeScaleArea");
+            timeScaleAreaObj.transform.SetParent(menuBarObj.transform, false);
+            RectTransform timeScaleAreaRect = timeScaleAreaObj.AddComponent<RectTransform>();
+            timeScaleAreaRect.sizeDelta = new Vector2(280, 0);
+
+            HorizontalLayoutGroup timeScaleLayout = timeScaleAreaObj.AddComponent<HorizontalLayoutGroup>();
+            timeScaleLayout.spacing = 5;
+            timeScaleLayout.padding = new RectOffset(10, 10, 0, 0);
+            timeScaleLayout.childAlignment = TextAnchor.MiddleLeft;
+            timeScaleLayout.childControlWidth = false;
+            timeScaleLayout.childControlHeight = true;
+            timeScaleLayout.childForceExpandWidth = false;
+            timeScaleLayout.childForceExpandHeight = true;
+
+            // 時間経過スケール変更ボタンを作成する関数
+            Button CreateTimeScaleButton(string buttonName, string buttonText, Vector2 size)
+            {
+                GameObject buttonObj = new GameObject(buttonName);
+                buttonObj.transform.SetParent(timeScaleAreaObj.transform, false);
+                Image buttonImage = buttonObj.AddComponent<Image>();
+                buttonImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+
+                Button button = buttonObj.AddComponent<Button>();
+
+                RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
+                buttonRect.sizeDelta = size;
+
+                GameObject textObj = new GameObject("Text");
+                textObj.transform.SetParent(buttonObj.transform, false);
+                Text text = textObj.AddComponent<Text>();
+                text.text = buttonText;
+                text.font = GetFont();
+                text.fontSize = 12;
+                text.alignment = TextAnchor.MiddleCenter;
+                text.color = Color.white;
+
+                RectTransform textRect = textObj.GetComponent<RectTransform>();
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.sizeDelta = Vector2.zero;
+
+                return button;
+            }
+
+            Button pauseButton = CreateTimeScaleButton("PauseButton", "ポーズ", new Vector2(60, 50));
+            Button speed1xButton = CreateTimeScaleButton("Speed1xButton", "1倍", new Vector2(60, 50));
+            Button speed2xButton = CreateTimeScaleButton("Speed2xButton", "2倍", new Vector2(60, 50));
+            Button speed3xButton = CreateTimeScaleButton("Speed3xButton", "3倍", new Vector2(60, 50));
+
+            // MenuBarUIコンポーネントを追加
+            MenuBarUI menuBarUI = menuBarObj.AddComponent<MenuBarUI>();
+
+            // リフレクションでフィールドを設定
+            var menuBarUIType = typeof(MenuBarUI);
+            var reputationTextField = menuBarUIType.GetField("reputationText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            reputationTextField?.SetValue(menuBarUI, reputationText);
+
+            var moneyTextField = menuBarUIType.GetField("moneyText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            moneyTextField?.SetValue(menuBarUI, moneyText);
+
+            var homeButtonField = menuBarUIType.GetField("homeButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            homeButtonField?.SetValue(menuBarUI, homeButton);
+
+            var clubPolicyButtonField = menuBarUIType.GetField("clubPolicyButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            clubPolicyButtonField?.SetValue(menuBarUI, clubPolicyButton);
+
+            var memberListButtonField = menuBarUIType.GetField("memberListButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            memberListButtonField?.SetValue(menuBarUI, memberListButton);
+
+            var itemButtonField = menuBarUIType.GetField("itemButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            itemButtonField?.SetValue(menuBarUI, itemButton);
+
+            var researchButtonField = menuBarUIType.GetField("researchButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            researchButtonField?.SetValue(menuBarUI, researchButton);
+
+            var achievementButtonField = menuBarUIType.GetField("achievementButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            achievementButtonField?.SetValue(menuBarUI, achievementButton);
+
+            var systemButtonField = menuBarUIType.GetField("systemButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            systemButtonField?.SetValue(menuBarUI, systemButton);
+
+            var dateTextField = menuBarUIType.GetField("dateText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            dateTextField?.SetValue(menuBarUI, dateText);
+
+            var pauseButtonField = menuBarUIType.GetField("pauseButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            pauseButtonField?.SetValue(menuBarUI, pauseButton);
+
+            var speed1xButtonField = menuBarUIType.GetField("speed1xButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            speed1xButtonField?.SetValue(menuBarUI, speed1xButton);
+
+            var speed2xButtonField = menuBarUIType.GetField("speed2xButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            speed2xButtonField?.SetValue(menuBarUI, speed2xButton);
+
+            var speed3xButtonField = menuBarUIType.GetField("speed3xButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            speed3xButtonField?.SetValue(menuBarUI, speed3xButton);
+
+            // 初期表示を更新
+            menuBarUI.RefreshDisplay();
+
+            Debug.Log("Menu Bar created successfully!");
+        }
+
+        [MenuItem("Setup/Create All Screen Canvases", false, 41)]
+        public static void CreateAllScreenCanvases()
+        {
+            CreateClubPolicyCanvas();
+            CreateItemCanvas();
+            CreateResearchCanvas();
+            CreateAchievementCanvas();
+            CreateSystemCanvas();
+
+            // 部員一覧Canvasが既に存在するかチェック
+            Canvas[] allCanvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Canvas memberListCanvas = null;
+            foreach (var canvas in allCanvases)
+            {
+                if (canvas.name == "ClubMemberListCanvas")
+                {
+                    memberListCanvas = canvas;
+                    break;
+                }
+            }
+
+            // 部員一覧Canvasが存在しない場合は作成
+            if (memberListCanvas == null)
+            {
+                CreateClubMemberListUI();
+            }
+            else
+            {
+                // 既存のCanvasをScreenManagerに登録
+                ScreenManager screenManager = ScreenManager.Instance;
+                screenManager.RegisterCanvas(ScreenManager.ScreenType.MemberList, memberListCanvas);
+            }
+
+            Debug.Log("All screen canvases created successfully!");
+        }
+
+        private static void CreateClubPolicyCanvas()
+        {
+            GameObject canvasObj = new GameObject("ClubPolicyCanvas");
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 1;
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
+
+            // 画面用の基本UI（後で拡張可能）
+            GameObject contentObj = new GameObject("Content");
+            contentObj.transform.SetParent(canvas.transform, false);
+            RectTransform contentRect = contentObj.AddComponent<RectTransform>();
+            contentRect.anchorMin = Vector2.zero;
+            contentRect.anchorMax = Vector2.one;
+            contentRect.sizeDelta = Vector2.zero;
+            contentRect.offsetMin = new Vector2(0, 90); // メニューバーの高さ分
+            contentRect.offsetMax = Vector2.zero;
+
+            Image contentImage = contentObj.AddComponent<Image>();
+            contentImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+
+            GameObject titleObj = new GameObject("TitleText");
+            titleObj.transform.SetParent(contentObj.transform, false);
+            Text titleText = titleObj.AddComponent<Text>();
+            titleText.text = "部活方針";
+            titleText.font = GetFont();
+            titleText.fontSize = 24;
+            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.color = Color.white;
+
+            RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0, 1);
+            titleRect.anchorMax = new Vector2(1, 1);
+            titleRect.sizeDelta = new Vector2(0, 50);
+            titleRect.anchoredPosition = new Vector2(0, -25);
+
+            canvas.gameObject.SetActive(false);
+
+            // ScreenManagerに登録
+            ScreenManager screenManager = ScreenManager.Instance;
+            screenManager.RegisterCanvas(ScreenManager.ScreenType.ClubPolicy, canvas);
+
+            Debug.Log("Club Policy Canvas created successfully!");
+        }
+
+        private static void CreateItemCanvas()
+        {
+            GameObject canvasObj = new GameObject("ItemCanvas");
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 1;
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
+
+            GameObject contentObj = new GameObject("Content");
+            contentObj.transform.SetParent(canvas.transform, false);
+            RectTransform contentRect = contentObj.AddComponent<RectTransform>();
+            contentRect.anchorMin = Vector2.zero;
+            contentRect.anchorMax = Vector2.one;
+            contentRect.sizeDelta = Vector2.zero;
+            contentRect.offsetMin = new Vector2(0, 90);
+            contentRect.offsetMax = Vector2.zero;
+
+            Image contentImage = contentObj.AddComponent<Image>();
+            contentImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+
+            GameObject titleObj = new GameObject("TitleText");
+            titleObj.transform.SetParent(contentObj.transform, false);
+            Text titleText = titleObj.AddComponent<Text>();
+            titleText.text = "アイテム";
+            titleText.font = GetFont();
+            titleText.fontSize = 24;
+            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.color = Color.white;
+
+            RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0, 1);
+            titleRect.anchorMax = new Vector2(1, 1);
+            titleRect.sizeDelta = new Vector2(0, 50);
+            titleRect.anchoredPosition = new Vector2(0, -25);
+
+            canvas.gameObject.SetActive(false);
+
+            ScreenManager screenManager = ScreenManager.Instance;
+            screenManager.RegisterCanvas(ScreenManager.ScreenType.Item, canvas);
+
+            Debug.Log("Item Canvas created successfully!");
+        }
+
+        private static void CreateResearchCanvas()
+        {
+            GameObject canvasObj = new GameObject("ResearchCanvas");
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 1;
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
+
+            GameObject contentObj = new GameObject("Content");
+            contentObj.transform.SetParent(canvas.transform, false);
+            RectTransform contentRect = contentObj.AddComponent<RectTransform>();
+            contentRect.anchorMin = Vector2.zero;
+            contentRect.anchorMax = Vector2.one;
+            contentRect.sizeDelta = Vector2.zero;
+            contentRect.offsetMin = new Vector2(0, 90);
+            contentRect.offsetMax = Vector2.zero;
+
+            Image contentImage = contentObj.AddComponent<Image>();
+            contentImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+
+            GameObject titleObj = new GameObject("TitleText");
+            titleObj.transform.SetParent(contentObj.transform, false);
+            Text titleText = titleObj.AddComponent<Text>();
+            titleText.text = "研究開発";
+            titleText.font = GetFont();
+            titleText.fontSize = 24;
+            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.color = Color.white;
+
+            RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0, 1);
+            titleRect.anchorMax = new Vector2(1, 1);
+            titleRect.sizeDelta = new Vector2(0, 50);
+            titleRect.anchoredPosition = new Vector2(0, -25);
+
+            canvas.gameObject.SetActive(false);
+
+            ScreenManager screenManager = ScreenManager.Instance;
+            screenManager.RegisterCanvas(ScreenManager.ScreenType.Research, canvas);
+
+            Debug.Log("Research Canvas created successfully!");
+        }
+
+        private static void CreateAchievementCanvas()
+        {
+            GameObject canvasObj = new GameObject("AchievementCanvas");
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 1;
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
+
+            GameObject contentObj = new GameObject("Content");
+            contentObj.transform.SetParent(canvas.transform, false);
+            RectTransform contentRect = contentObj.AddComponent<RectTransform>();
+            contentRect.anchorMin = Vector2.zero;
+            contentRect.anchorMax = Vector2.one;
+            contentRect.sizeDelta = Vector2.zero;
+            contentRect.offsetMin = new Vector2(0, 90);
+            contentRect.offsetMax = Vector2.zero;
+
+            Image contentImage = contentObj.AddComponent<Image>();
+            contentImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+
+            GameObject titleObj = new GameObject("TitleText");
+            titleObj.transform.SetParent(contentObj.transform, false);
+            Text titleText = titleObj.AddComponent<Text>();
+            titleText.text = "実績";
+            titleText.font = GetFont();
+            titleText.fontSize = 24;
+            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.color = Color.white;
+
+            RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0, 1);
+            titleRect.anchorMax = new Vector2(1, 1);
+            titleRect.sizeDelta = new Vector2(0, 50);
+            titleRect.anchoredPosition = new Vector2(0, -25);
+
+            canvas.gameObject.SetActive(false);
+
+            ScreenManager screenManager = ScreenManager.Instance;
+            screenManager.RegisterCanvas(ScreenManager.ScreenType.Achievement, canvas);
+
+            Debug.Log("Achievement Canvas created successfully!");
+        }
+
+        private static void CreateSystemCanvas()
+        {
+            GameObject canvasObj = new GameObject("SystemCanvas");
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 1;
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
+
+            GameObject contentObj = new GameObject("Content");
+            contentObj.transform.SetParent(canvas.transform, false);
+            RectTransform contentRect = contentObj.AddComponent<RectTransform>();
+            contentRect.anchorMin = Vector2.zero;
+            contentRect.anchorMax = Vector2.one;
+            contentRect.sizeDelta = Vector2.zero;
+            contentRect.offsetMin = new Vector2(0, 90);
+            contentRect.offsetMax = Vector2.zero;
+
+            Image contentImage = contentObj.AddComponent<Image>();
+            contentImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+
+            GameObject titleObj = new GameObject("TitleText");
+            titleObj.transform.SetParent(contentObj.transform, false);
+            Text titleText = titleObj.AddComponent<Text>();
+            titleText.text = "システム";
+            titleText.font = GetFont();
+            titleText.fontSize = 24;
+            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.color = Color.white;
+
+            RectTransform titleRect = titleObj.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0, 1);
+            titleRect.anchorMax = new Vector2(1, 1);
+            titleRect.sizeDelta = new Vector2(0, 50);
+            titleRect.anchoredPosition = new Vector2(0, -25);
+
+            canvas.gameObject.SetActive(false);
+
+            ScreenManager screenManager = ScreenManager.Instance;
+            screenManager.RegisterCanvas(ScreenManager.ScreenType.System, canvas);
+
+            Debug.Log("System Canvas created successfully!");
+        }
+
+        // Setup/CreateWindows/サブメニュー
+        [MenuItem("Setup/CreateWindows/Club Member List", false, 50)]
+        public static void CreateClubMemberListWindow()
+        {
+            CreateClubMemberListUI();
+        }
+
+        [MenuItem("Setup/CreateWindows/Club Policy", false, 51)]
+        public static void CreateClubPolicyWindow()
+        {
+            CreateClubPolicyCanvas();
+        }
+
+        [MenuItem("Setup/CreateWindows/Item", false, 52)]
+        public static void CreateItemWindow()
+        {
+            CreateItemCanvas();
+        }
+
+        [MenuItem("Setup/CreateWindows/Research", false, 53)]
+        public static void CreateResearchWindow()
+        {
+            CreateResearchCanvas();
+        }
+
+        [MenuItem("Setup/CreateWindows/Achievement", false, 54)]
+        public static void CreateAchievementWindow()
+        {
+            CreateAchievementCanvas();
+        }
+
+        [MenuItem("Setup/CreateWindows/System", false, 55)]
+        public static void CreateSystemWindow()
+        {
+            CreateSystemCanvas();
         }
 #endif
     }

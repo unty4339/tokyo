@@ -18,7 +18,6 @@ namespace MonsterBattleGame
                 {
                     GameObject go = new GameObject("GameTimeManager");
                     _instance = go.AddComponent<GameTimeManager>();
-                    DontDestroyOnLoad(go);
                 }
                 return _instance;
             }
@@ -103,7 +102,6 @@ namespace MonsterBattleGame
             if (_instance == null)
             {
                 _instance = this;
-                DontDestroyOnLoad(gameObject);
             }
             else if (_instance != this)
             {
