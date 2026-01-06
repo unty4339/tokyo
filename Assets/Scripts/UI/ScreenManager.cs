@@ -128,6 +128,20 @@ namespace MonsterBattleGame
                 if (targetCanvas != null)
                 {
                     targetCanvas.gameObject.SetActive(true);
+
+                    // MemberList画面の場合は、ClubMemberListUIのウィンドウを開く
+                    if (screenType == ScreenType.MemberList)
+                    {
+                        ClubMemberListUI listUI = targetCanvas.GetComponentInChildren<ClubMemberListUI>(true);
+                        if (listUI != null)
+                        {
+                            listUI.OpenWindow();
+                        }
+                        else
+                        {
+                            Debug.LogWarning("ClubMemberListUI component not found in MemberList canvas.");
+                        }
+                    }
                 }
             }
             else
