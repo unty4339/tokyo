@@ -79,6 +79,55 @@ namespace MonsterBattleGame
         {
             members.Clear();
         }
+
+        /// <summary>
+        /// 部員を削除
+        /// </summary>
+        /// <param name="member">削除する部員</param>
+        public void RemoveMember(ClubMember member)
+        {
+            if (member != null && members.Contains(member))
+            {
+                members.Remove(member);
+            }
+        }
+
+        /// <summary>
+        /// 全部員の学年を1つ上げる（3年生はそのまま）
+        /// </summary>
+        public void PromoteAllMembers()
+        {
+            foreach (var member in members)
+            {
+                if (member == null)
+                {
+                    continue;
+                }
+
+                switch (member.Grade)
+                {
+                    case Grade.FirstYear:
+                        member.Grade = Grade.SecondYear;
+                        break;
+                    case Grade.SecondYear:
+                        member.Grade = Grade.ThirdYear;
+                        break;
+                    case Grade.ThirdYear:
+                        // 3年生はそのまま
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 指定学年の部員リストを取得
+        /// </summary>
+        /// <param name="grade">学年</param>
+        /// <returns>指定学年の部員リスト</returns>
+        public List<ClubMember> GetMembersByGrade(Grade grade)
+        {
+            return members.FindAll(m => m != null && m.Grade == grade);
+        }
     }
 }
 

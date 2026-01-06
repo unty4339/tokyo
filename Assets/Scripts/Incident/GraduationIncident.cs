@@ -1,15 +1,16 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MonsterBattleGame
 {
     /// <summary>
-    /// 入学インシデント
-    /// 毎年4月1週目に発生し、既存部員の学年を上げ、1年生を追加する
+    /// 卒業インシデント
+    /// 毎年3月1週目に発生し、3年生の部員を全て削除する
     /// </summary>
-    public class EnrollmentIncident : Incident
+    public class GraduationIncident : Incident
     {
-        public override string Id => "enrollment";
+        public override string Id => "graduation";
 
         public override bool IsMandatory => true;
 
@@ -17,8 +18,8 @@ namespace MonsterBattleGame
 
         public override bool CheckCondition(int year, int month, int week)
         {
-            // 4月1週目に発生
-            return month == 4 && week == 1;
+            // 3月1週目に発生
+            return month == 3 && week == 1;
         }
 
         public override string GetWindowPrefabAddress()
@@ -54,9 +55,9 @@ namespace MonsterBattleGame
             };
 
             return IncidentWindowBuilder.CreateWindow(
-                "入学",
+                "卒業",
                 null,
-                "部員が入った",
+                "部員が卒業した",
                 options
             );
         }
@@ -66,34 +67,20 @@ namespace MonsterBattleGame
             var memberManager = ClubMemberManager.Instance;
             if (memberManager == null)
             {
-                Debug.LogWarning("[EnrollmentIncident] ClubMemberManagerが見つかりません");
+                Debug.LogWarning("[GraduationIncident] ClubMemberManagerが見つかりません");
                 return;
             }
 
-            // 既存部員の学年を1つ上げる
-            memberManager.PromoteAllMembers();
+            // 3年生の部員を全て取得
+            List<ClubMember> thirdYearMembers = memberManager.GetMembersByGrade(Grade.ThirdYear);
 
-            // 1年生を3-5人ランダムで追加
-            System.Random random = new System.Random();
-            int newMemberCount = random.Next(3, 6); // 3-5人
-
-            for (int i = 0; i < newMemberCount; i++)
+            // 3年生を全て削除
+            foreach (var member in thirdYearMembers)
             {
-                int memberNumber = memberManager.GetMemberCount() + 1;
-                string lastName = "新入";
-                string firstName = $"{memberNumber}号";
-
-                var newMember = DummyDataFactory.CreateDefaultClubMember(
-                    Grade.FirstYear,
-                    level: 10,
-                    lastName: lastName,
-                    firstName: firstName
-                );
-
-                memberManager.AddMember(newMember);
+                memberManager.RemoveMember(member);
             }
 
-            Debug.Log($"[EnrollmentIncident] 1年生を{newMemberCount}人追加しました。");
+            Debug.Log($"[GraduationIncident] 3年生を{thirdYearMembers.Count}人削除しました。");
         }
     }
 }

@@ -94,6 +94,66 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
+        /// アセットを同期でロードする
+        /// 注意: このメソッドはメインスレッドをブロックする可能性があります
+        /// </summary>
+        /// <typeparam name="T">ロードするアセットの型</typeparam>
+        /// <param name="address">アセットのアドレス</param>
+        /// <returns>ロードされたアセット</returns>
+        /// <exception cref="AddressableAssetNotFoundException">アセットが見つからない場合</exception>
+        public T LoadAsset<T>(string address) where T : UnityEngine.Object
+        {
+            if (string.IsNullOrEmpty(address))
+            {
+                string errorMsg = "アセットアドレスが空です";
+                Debug.LogError($"[AddressableManager] {errorMsg}");
+                throw new ArgumentException(errorMsg, nameof(address));
+            }
+
+            AsyncOperationHandle<T> handle = default;
+            try
+            {
+                handle = Addressables.LoadAssetAsync<T>(address);
+                T asset = handle.WaitForCompletion();
+
+                if (handle.Status == AsyncOperationStatus.Failed)
+                {
+                    string errorMsg = $"アセットのロードに失敗しました: {address}";
+                    Debug.LogError($"[AddressableManager] {errorMsg}. エラー: {handle.OperationException}");
+                    Addressables.Release(handle);
+                    throw new AddressableAssetNotFoundException(address, handle.OperationException?.Message ?? "不明なエラー");
+                }
+
+                if (asset == null)
+                {
+                    string errorMsg = $"アセットが見つかりませんでした: {address}";
+                    Debug.LogError($"[AddressableManager] {errorMsg}");
+                    Addressables.Release(handle);
+                    throw new AddressableAssetNotFoundException(address);
+                }
+
+                return asset;
+            }
+            catch (Exception ex)
+            {
+                if (ex is AddressableAssetNotFoundException)
+                {
+                    throw;
+                }
+
+                // ハンドルが初期化されている場合は解放
+                if (handle.IsValid())
+                {
+                    Addressables.Release(handle);
+                }
+
+                string errorMsg = $"アセットのロード中にエラーが発生しました: {address}";
+                Debug.LogError($"[AddressableManager] {errorMsg}. エラー: {ex.Message}");
+                throw new AddressableAssetNotFoundException(address, ex.Message);
+            }
+        }
+
+        /// <summary>
         /// GameObjectをロードしてインスタンス化する
         /// </summary>
         /// <param name="address">アセットのアドレス</param>
@@ -137,6 +197,66 @@ namespace MonsterBattleGame
                 if (ex is AddressableAssetNotFoundException)
                 {
                     throw;
+                }
+
+                string errorMsg = $"GameObjectのインスタンス化中にエラーが発生しました: {address}";
+                Debug.LogError($"[AddressableManager] {errorMsg}. エラー: {ex.Message}");
+                throw new AddressableAssetNotFoundException(address, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// GameObjectを同期でロードしてインスタンス化する
+        /// 注意: このメソッドはメインスレッドをブロックする可能性があります
+        /// </summary>
+        /// <param name="address">アセットのアドレス</param>
+        /// <param name="parent">親Transform（オプション）</param>
+        /// <returns>インスタンス化されたGameObject</returns>
+        /// <exception cref="AddressableAssetNotFoundException">アセットが見つからない場合</exception>
+        public GameObject Instantiate(string address, Transform parent = null)
+        {
+            if (string.IsNullOrEmpty(address))
+            {
+                string errorMsg = "アセットアドレスが空です";
+                Debug.LogError($"[AddressableManager] {errorMsg}");
+                throw new ArgumentException(errorMsg, nameof(address));
+            }
+
+            AsyncOperationHandle<GameObject> handle = default;
+            try
+            {
+                handle = Addressables.InstantiateAsync(address, parent);
+                GameObject instance = handle.WaitForCompletion();
+
+                if (handle.Status == AsyncOperationStatus.Failed)
+                {
+                    string errorMsg = $"GameObjectのインスタンス化に失敗しました: {address}";
+                    Debug.LogError($"[AddressableManager] {errorMsg}. エラー: {handle.OperationException}");
+                    Addressables.Release(handle);
+                    throw new AddressableAssetNotFoundException(address, handle.OperationException?.Message ?? "不明なエラー");
+                }
+
+                if (instance == null)
+                {
+                    string errorMsg = $"GameObjectが見つかりませんでした: {address}";
+                    Debug.LogError($"[AddressableManager] {errorMsg}");
+                    Addressables.Release(handle);
+                    throw new AddressableAssetNotFoundException(address);
+                }
+
+                return instance;
+            }
+            catch (Exception ex)
+            {
+                if (ex is AddressableAssetNotFoundException)
+                {
+                    throw;
+                }
+
+                // ハンドルが初期化されている場合は解放
+                if (handle.IsValid())
+                {
+                    Addressables.Release(handle);
                 }
 
                 string errorMsg = $"GameObjectのインスタンス化中にエラーが発生しました: {address}";

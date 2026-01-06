@@ -96,5 +96,13 @@ namespace MonsterBattleGame
         {
             return contentArea;
         }
+
+        /// <summary>
+        /// コンテンツエリアを設定（IncidentWindowBuilderから使用）
+        /// </summary>
+        public void SetContentArea(Transform area)
+        {
+            contentArea = area;
+        }
     }
 }

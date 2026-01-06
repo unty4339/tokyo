@@ -67,6 +67,12 @@ namespace MonsterBattleGame
             }
         }
 
+        private void Start()
+        {
+            // 季節インシデントを登録
+            RegisterSeasonalIncident();
+        }
+
         private void OnDestroy()
         {
             if (timeManager != null)
@@ -130,6 +136,7 @@ namespace MonsterBattleGame
                 // 条件をチェック
                 if (incident.CheckCondition(year, month, week))
                 {
+                    Debug.Log($"[IncidentManager] {incident.Id} が発生しました。");
                     TriggerIncident(incident, totalWeeks);
                 }
             }
@@ -176,6 +183,12 @@ namespace MonsterBattleGame
                 return;
             }
 
+            // インシデントの解決処理を実行
+            if (instance.Incident != null)
+            {
+                instance.Incident.OnResolve(instance);
+            }
+
             activeIncidents.Remove(instance);
             OnIncidentResolved?.Invoke(instance);
 
@@ -205,6 +218,15 @@ namespace MonsterBattleGame
                 Destroy(instance.WindowPrefabInstance);
                 instance.WindowPrefabInstance = null;
             }
+        }
+
+        /// <summary>
+        /// 季節インシデントを登録する
+        /// </summary>
+        public void RegisterSeasonalIncident()
+        {
+            RegisterIncident(new EnrollmentIncident());
+            RegisterIncident(new GraduationIncident());
         }
     }
 }
