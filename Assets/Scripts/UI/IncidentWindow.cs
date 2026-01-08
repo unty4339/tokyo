@@ -68,11 +68,25 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
+        /// 選択肢の情報を取得
+        /// </summary>
+        public IncidentWindowOption[] GetOptions()
+        {
+            return options;
+        }
+
+        /// <summary>
         /// 選択肢の情報を設定（IncidentWindowBuilderから使用）
         /// </summary>
         public void SetOptions(IncidentWindowOption[] windowOptions)
         {
             options = windowOptions;
+            
+            // すでにInstanceが設定されている場合は、ここでボタンをセットアップする
+            if (Instance != null && options != null && options.Length > 0)
+            {
+                SetupOptionButtons();
+            }
         }
 
         /// <summary>

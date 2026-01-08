@@ -218,12 +218,25 @@ namespace MonsterBattleGame
             // ウィンドウをインスタンス化
             currentWindowInstance = Instantiate(windowPrefab, canvas.transform);
 
-            // IncidentWindowコンポーネントを取得してインスタンスを設定
+            // IncidentWindowコンポーネントを取得
             IncidentWindow windowComponent = currentWindowInstance.GetComponent<IncidentWindow>();
             if (windowComponent == null)
             {
                 throw new System.NullReferenceException($"IncidentWindow component not found in prefab: {instance.Incident.Id}. The window prefab must have an IncidentWindow component.");
             }
+
+            // Prefabからオプションをコピー
+            IncidentWindow prefabComponent = windowPrefab.GetComponent<IncidentWindow>();
+            if (prefabComponent != null)
+            {
+                IncidentWindowOption[] prefabOptions = prefabComponent.GetOptions();
+                if (prefabOptions != null && prefabOptions.Length > 0)
+                {
+                    windowComponent.SetOptions(prefabOptions);
+                }
+            }
+
+            // インスタンスを設定（この中でSetupOptionButtonsが呼ばれる）
             windowComponent.SetIncidentInstance(instance);
 
             instance.WindowPrefabInstance = currentWindowInstance;
