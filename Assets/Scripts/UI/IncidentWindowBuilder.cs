@@ -56,6 +56,51 @@ namespace MonsterBattleGame
             titleText.alignment = TextAnchor.MiddleCenter;
             titleText.color = Color.white;
 
+            // 折りたたみボタンを作成（右上）
+            GameObject minimizeButtonObj = new GameObject("MinimizeButton");
+            minimizeButtonObj.transform.SetParent(panelObj.transform, false);
+            RectTransform minimizeButtonRect = minimizeButtonObj.AddComponent<RectTransform>();
+            minimizeButtonRect.anchorMin = new Vector2(1, 1);
+            minimizeButtonRect.anchorMax = new Vector2(1, 1);
+            minimizeButtonRect.pivot = new Vector2(1, 1);
+            minimizeButtonRect.sizeDelta = new Vector2(30, 30);
+            minimizeButtonRect.anchoredPosition = new Vector2(-10, -10);
+
+            Image minimizeButtonImage = minimizeButtonObj.AddComponent<Image>();
+            minimizeButtonImage.color = new Color(0.4f, 0.4f, 0.4f, 1f);
+
+            Button minimizeButton = minimizeButtonObj.AddComponent<Button>();
+            minimizeButton.targetGraphic = minimizeButtonImage;
+
+            GameObject minimizeButtonTextObj = new GameObject("Text");
+            minimizeButtonTextObj.transform.SetParent(minimizeButtonObj.transform, false);
+            RectTransform minimizeButtonTextRect = minimizeButtonTextObj.AddComponent<RectTransform>();
+            minimizeButtonTextRect.anchorMin = Vector2.zero;
+            minimizeButtonTextRect.anchorMax = Vector2.one;
+            minimizeButtonTextRect.sizeDelta = Vector2.zero;
+            minimizeButtonTextRect.anchoredPosition = Vector2.zero;
+
+            Text minimizeButtonText = minimizeButtonTextObj.AddComponent<Text>();
+            minimizeButtonText.text = "[-]";
+            minimizeButtonText.font = GetFont();
+            minimizeButtonText.fontSize = 16;
+            minimizeButtonText.alignment = TextAnchor.MiddleCenter;
+            minimizeButtonText.color = Color.white;
+
+            // 折りたたみボタンのクリックイベントを設定
+            minimizeButton.onClick.AddListener(() =>
+            {
+                if (windowComponent != null)
+                {
+                    windowComponent.MinimizeWindow();
+                }
+            });
+
+            // リフレクションでminimizeButtonフィールドを設定
+            var incidentWindowType = typeof(IncidentWindow);
+            var minimizeButtonField = incidentWindowType.GetField("minimizeButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            minimizeButtonField?.SetValue(windowComponent, minimizeButton);
+
             // 画像（オプショナル）
             if (!string.IsNullOrEmpty(imagePath))
             {
@@ -94,17 +139,19 @@ namespace MonsterBattleGame
                 optionsContainer.transform.SetParent(panelObj.transform, false);
                 RectTransform optionsRect = optionsContainer.AddComponent<RectTransform>();
                 optionsRect.anchorMin = new Vector2(0, 0);
-                optionsRect.anchorMax = new Vector2(1, 0.3f);
+                optionsRect.anchorMax = new Vector2(1, 0.25f);
                 optionsRect.sizeDelta = Vector2.zero;
                 optionsRect.anchoredPosition = Vector2.zero;
 
-                // VerticalLayoutGroupを追加してボタンを縦に並べる
-                VerticalLayoutGroup layoutGroup = optionsContainer.AddComponent<VerticalLayoutGroup>();
+                // HorizontalLayoutGroupを追加してボタンを横に並べる
+                HorizontalLayoutGroup layoutGroup = optionsContainer.AddComponent<HorizontalLayoutGroup>();
                 layoutGroup.childAlignment = TextAnchor.MiddleCenter;
                 layoutGroup.spacing = 10;
                 layoutGroup.padding = new RectOffset(20, 20, 10, 10);
-                ContentSizeFitter sizeFitter = optionsContainer.AddComponent<ContentSizeFitter>();
-                sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                layoutGroup.childControlWidth = false;
+                layoutGroup.childControlHeight = false;
+                layoutGroup.childForceExpandWidth = false;
+                layoutGroup.childForceExpandHeight = false;
 
                 for (int i = 0; i < options.Length; i++)
                 {
@@ -140,20 +187,16 @@ namespace MonsterBattleGame
                     buttonText.alignment = TextAnchor.MiddleCenter;
                     buttonText.color = Color.white;
 
-                    // ボタンクリック時のコールバックを設定
-                    // IncidentInstanceは後でSetIncidentInstanceで設定される
-                    button.onClick.AddListener(() =>
-                    {
-                        if (windowComponent.Instance != null && option.OnSelected != null)
-                        {
-                            option.OnSelected(windowComponent.Instance);
-                        }
-                    });
+                    // ボタンのコールバックはSetIncidentInstance()後にSetupOptionButtons()で設定される
+                    // ここではリスナーを設定しない
                 }
             }
 
             // contentAreaを設定（IncidentWindowのGetContentAreaで使用）
             windowComponent.SetContentArea(panelObj.transform);
+
+            // 選択肢の情報を設定（SetIncidentInstance後にコールバックが設定される）
+            windowComponent.SetOptions(options);
 
             return windowRoot;
         }

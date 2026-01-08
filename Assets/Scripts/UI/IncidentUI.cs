@@ -83,9 +83,13 @@ namespace MonsterBattleGame
         /// </summary>
         public void UpdateIcons()
         {
-            if (incidentManager == null || iconContainer == null)
+            if (incidentManager == null)
             {
-                return;
+                throw new System.NullReferenceException("incidentManager is null. IncidentManager.Instance must be available.");
+            }
+            if (iconContainer == null)
+            {
+                throw new System.NullReferenceException("iconContainer is null. It must be assigned in the inspector.");
             }
 
             var activeIncidents = incidentManager.ActiveIncidents;
@@ -119,7 +123,7 @@ namespace MonsterBattleGame
         {
             if (iconContainer == null)
             {
-                return;
+                throw new System.NullReferenceException("iconContainer is null. It must be assigned in the inspector.");
             }
 
             GameObject iconObj;
@@ -159,9 +163,29 @@ namespace MonsterBattleGame
         /// </summary>
         public void OpenWindow(IncidentInstance instance)
         {
-            if (instance == null || instance.Incident == null)
+            if (instance == null)
             {
-                return;
+                throw new System.ArgumentNullException(nameof(instance), "instance cannot be null.");
+            }
+            if (instance.Incident == null)
+            {
+                throw new System.NullReferenceException("instance.Incident is null. IncidentInstance must have a valid Incident.");
+            }
+
+            // 既にウィンドウが存在する場合
+            if (instance.WindowPrefabInstance != null)
+            {
+                IncidentWindow existingWindow = instance.WindowPrefabInstance.GetComponent<IncidentWindow>();
+                if (existingWindow != null)
+                {
+                    // ウィンドウが非表示の場合は表示する
+                    if (!existingWindow.gameObject.activeSelf)
+                    {
+                        existingWindow.ShowWindow();
+                    }
+                    // 既に表示されている場合は何もしない（または前面に持ってくる）
+                    return;
+                }
             }
 
             // 既存のウィンドウを閉じる
@@ -171,20 +195,24 @@ namespace MonsterBattleGame
             GameObject windowPrefab = instance.Incident.GetWindowPrefab();
             if (windowPrefab == null)
             {
-                Debug.LogWarning($"Window prefab not found for incident: {instance.Incident.Id}");
-                return;
+                throw new System.NullReferenceException($"Window prefab not found for incident: {instance.Incident.Id}. Make sure GetWindowPrefab() returns a valid prefab.");
             }
 
-            // Canvasを探す（既存のCanvasまたは新規作成）
-            Canvas canvas = FindFirstObjectByType<Canvas>();
+            // Canvasを探す（MenuCanvasを優先）
+            Canvas canvas = null;
+            Canvas[] allCanvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var c in allCanvases)
+            {
+                if (c.name == "MenuCanvas")
+                {
+                    canvas = c;
+                    break;
+                }
+            }
+
             if (canvas == null)
             {
-                GameObject canvasObj = new GameObject("IncidentCanvas");
-                canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvas.sortingOrder = 10; // 他のUIより前面に表示
-                canvasObj.AddComponent<CanvasScaler>();
-                canvasObj.AddComponent<GraphicRaycaster>();
+                throw new System.Exception("MenuCanvas not found. Please create MenuCanvas first.");
             }
 
             // ウィンドウをインスタンス化
@@ -192,14 +220,11 @@ namespace MonsterBattleGame
 
             // IncidentWindowコンポーネントを取得してインスタンスを設定
             IncidentWindow windowComponent = currentWindowInstance.GetComponent<IncidentWindow>();
-            if (windowComponent != null)
+            if (windowComponent == null)
             {
-                windowComponent.SetIncidentInstance(instance);
+                throw new System.NullReferenceException($"IncidentWindow component not found in prefab: {instance.Incident.Id}. The window prefab must have an IncidentWindow component.");
             }
-            else
-            {
-                Debug.LogWarning($"IncidentWindow component not found in prefab: {instance.Incident.Id}");
-            }
+            windowComponent.SetIncidentInstance(instance);
 
             instance.WindowPrefabInstance = currentWindowInstance;
         }

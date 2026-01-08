@@ -26,7 +26,7 @@ namespace MonsterBattleGame
         // 時間設定
         private const int WEEKS_PER_MONTH = 4;
         private const int WEEKS_PER_YEAR = 52;
-        private const float SECONDS_PER_WEEK = 4f; // 1週 = 60秒（後で調整可能）
+        private const float SECONDS_PER_WEEK = 2f; // 1週 = 60秒（後で調整可能）
 
         // 現在の時間（週単位で累積）
         [SerializeField] float currentWeekFloat = 0f; // 浮動小数点で週を管理

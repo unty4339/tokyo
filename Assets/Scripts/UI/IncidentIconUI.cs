@@ -59,10 +59,11 @@ namespace MonsterBattleGame
         /// </summary>
         private void OnButtonClicked()
         {
-            if (Instance != null)
+            if (Instance == null)
             {
-                OnIconClicked?.Invoke(Instance);
+                throw new System.NullReferenceException("Instance is null. SetIncidentInstance must be called before the icon can be clicked.");
             }
+            OnIconClicked?.Invoke(Instance);
         }
     }
 }
