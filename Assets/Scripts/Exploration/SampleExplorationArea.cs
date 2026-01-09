@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace MonsterBattleGame
 {
@@ -6,7 +7,7 @@ namespace MonsterBattleGame
     /// サンプル探索エリアの実装クラス
     /// 基本的な割り当て/解除ロジックを実装
     /// </summary>
-    public class SampleExplorationArea : ExplorationArea
+    public class SampleExplorationArea : ExplorationArea, IPointerClickHandler
     {
         /// <summary>
         /// 毎週のイベントを作成
@@ -16,6 +17,14 @@ namespace MonsterBattleGame
         {
             // サンプルイベントを作成
             return new SampleExplorationIncident();
+        }
+
+        /// <summary>
+        /// オブジェクトがクリックされたときに呼ばれる
+        /// </summary>
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            Debug.Log("クリック");
         }
     }
 }

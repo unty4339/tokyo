@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Newtonsoft.Json.Linq; // Package Managerから導入が必要
+using MonsterBattleGame;
 
 public class GeoJsonMapGenerator : MonoBehaviour
 {
@@ -200,6 +201,7 @@ public class GeoJsonMapGenerator : MonoBehaviour
         PolygonCollider2D col = areaObj.AddComponent<PolygonCollider2D>();
         MeshFilter mf = areaObj.AddComponent<MeshFilter>();
         MeshRenderer mr = areaObj.AddComponent<MeshRenderer>();
+        SampleExplorationArea explorationArea = areaObj.AddComponent<SampleExplorationArea>();
 
         mr.material = areaMaterial != null ? areaMaterial : new Material(Shader.Find("Sprites/Default"));
         mr.material.color = new Color(Random.value, Random.value, Random.value);
