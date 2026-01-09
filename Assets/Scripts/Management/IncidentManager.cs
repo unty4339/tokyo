@@ -160,6 +160,33 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
+        /// インシデントを直接発生させる（外部から呼び出し可能）
+        /// 探索エリアなどから確率判定で直接イベントを発火する場合に使用
+        /// </summary>
+        /// <param name="incident">発生させるインシデント</param>
+        /// <param name="year">現在の年</param>
+        /// <param name="month">現在の月</param>
+        /// <param name="week">現在の週</param>
+        public void TriggerIncidentDirectly(Incident incident, int year, int month, int week)
+        {
+            if (incident == null)
+            {
+                Debug.LogWarning("[IncidentManager] インシデントがnullです。");
+                return;
+            }
+
+            // 既にアクティブなインシデントはスキップ
+            if (activeIncidents.Any(inst => inst.Incident.Id == incident.Id))
+            {
+                Debug.Log($"[IncidentManager] インシデント {incident.Id} は既にアクティブです。");
+                return;
+            }
+
+            int totalWeeks = CalculateTotalWeeks(year, month, week);
+            TriggerIncident(incident, totalWeeks);
+        }
+
+        /// <summary>
         /// 期限切れのインシデントをチェック
         /// </summary>
         private void CheckExpiredIncidents(int totalWeeks)

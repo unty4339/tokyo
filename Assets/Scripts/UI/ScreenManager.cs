@@ -23,6 +23,7 @@ namespace MonsterBattleGame
         }
 
         [Header("Screen Canvases")]
+        [SerializeField] private Canvas homeCanvas;
         [SerializeField] private Canvas clubPolicyCanvas;
         [SerializeField] private Canvas clubMemberListCanvas;
         [SerializeField] private Canvas itemCanvas;
@@ -65,6 +66,11 @@ namespace MonsterBattleGame
         private void InitializeScreenCanvases()
         {
             screenCanvases.Clear();
+
+            if (homeCanvas != null)
+            {
+                screenCanvases[ScreenType.Home] = homeCanvas;
+            }
 
             if (clubPolicyCanvas != null)
             {
@@ -114,12 +120,6 @@ namespace MonsterBattleGame
                 {
                     canvas.gameObject.SetActive(false);
                 }
-            }
-
-            // ホーム画面の場合は何も表示しない
-            if (screenType == ScreenType.Home)
-            {
-                return;
             }
 
             // 選択された画面のCanvasを表示
@@ -173,6 +173,9 @@ namespace MonsterBattleGame
             // フィールドにも設定（Inspector表示用）
             switch (screenType)
             {
+                case ScreenType.Home:
+                    homeCanvas = canvas;
+                    break;
                 case ScreenType.ClubPolicy:
                     clubPolicyCanvas = canvas;
                     break;
