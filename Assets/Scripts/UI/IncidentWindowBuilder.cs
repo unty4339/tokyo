@@ -221,12 +221,12 @@ namespace MonsterBattleGame
 
             // IncidentWindowOptionに変換
             IncidentWindowOption[] options = null;
-            if (content.HasOptions())
+            if (content is IncidentOptionalContent optionalContent && optionalContent.HasOptions())
             {
-                options = new IncidentWindowOption[content.Options.Length];
-                for (int i = 0; i < content.Options.Length; i++)
+                options = new IncidentWindowOption[optionalContent.Options.Length];
+                for (int i = 0; i < optionalContent.Options.Length; i++)
                 {
-                    var contentOption = content.Options[i];
+                    var contentOption = optionalContent.Options[i];
                     options[i] = new IncidentWindowOption(contentOption.Label, (process) =>
                     {
                         // コンテンツオプションのコールバックを呼び出す

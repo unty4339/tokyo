@@ -91,7 +91,7 @@ namespace MonsterBattleGame
             // テキスト状態
             if (state is TextIncidentState textState)
             {
-                return new IncidentContent
+                return new IncidentOptionalContent
                 {
                     Title = "探索イベント",
                     MessageText = textState.Text,
@@ -106,7 +106,7 @@ namespace MonsterBattleGame
             // 選択肢状態
             if (state is ChoiceIncidentState choiceState)
             {
-                return new IncidentContent
+                return new IncidentOptionalContent
                 {
                     Title = "探索イベント",
                     MessageText = choiceState.Text,

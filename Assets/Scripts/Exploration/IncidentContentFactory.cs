@@ -62,7 +62,7 @@ namespace MonsterBattleGame
                 return null;
             }
 
-            var content = new IncidentContent
+            var content = new IncidentOptionalContent
             {
                 Title = "戦闘",
                 Type = IncidentContentType.Battle,

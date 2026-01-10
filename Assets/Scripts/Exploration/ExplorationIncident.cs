@@ -59,7 +59,7 @@ namespace MonsterBattleGame
 
             // デフォルト実装：基本的なコンテンツを作成
             // 派生クラスでオーバーライドしてカスタマイズ可能
-            var content = new IncidentContent
+            var content = new IncidentOptionalContent
             {
                 Title = Id,
                 MessageText = "イベントが発生しました。",
