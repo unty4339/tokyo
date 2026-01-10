@@ -165,6 +165,17 @@ namespace MonsterBattleGame
         {
             return $"{CurrentYear}年目 {CurrentMonth}月 {CurrentWeek}週";
         }
+
+        /// <summary>
+        /// 現在の週の進捗を取得（0~1の値）
+        /// </summary>
+        /// <returns>現在の週の進捗（0.0 ~ 1.0）</returns>
+        public float GetWeekProgress()
+        {
+            // currentWeekFloatから現在の週の開始時点を引いて、1週間分で割る
+            float weekStart = Mathf.Floor(currentWeekFloat);
+            return currentWeekFloat - weekStart; // 0~1の値
+        }
     }
 }
 

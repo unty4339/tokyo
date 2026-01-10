@@ -13,10 +13,18 @@ namespace MonsterBattleGame
         {
             get
             {
+                // 既存のインスタンスが破壊されている可能性があるため、再確認
                 if (_instance == null)
                 {
-                    GameObject go = new GameObject("ScreenManager");
-                    _instance = go.AddComponent<ScreenManager>();
+                    // まずシーン内の既存のインスタンスを探す
+                    _instance = FindFirstObjectByType<ScreenManager>();
+                    
+                    // シーン内に存在しない場合のみ新規作成
+                    if (_instance == null)
+                    {
+                        GameObject go = new GameObject("ScreenManager");
+                        _instance = go.AddComponent<ScreenManager>();
+                    }
                 }
                 return _instance;
             }
@@ -34,6 +42,11 @@ namespace MonsterBattleGame
         private Dictionary<ScreenType, Canvas> screenCanvases = new Dictionary<ScreenType, Canvas>();
         private ScreenType currentScreen = ScreenType.Home;
 
+        /// <summary>
+        /// HomeCanvasへのアクセス
+        /// </summary>
+        public Canvas HomeCanvas => homeCanvas;
+
         public enum ScreenType
         {
             Home,
@@ -47,15 +60,18 @@ namespace MonsterBattleGame
 
         private void Awake()
         {
-            if (_instance == null)
-            {
-                _instance = this;
-            }
-            else if (_instance != this)
+            // 既にインスタンスが存在し、自分自身でない場合は破壊
+            if (_instance != null && _instance != this)
             {
                 Destroy(gameObject);
                 return;
             }
+
+            // インスタンスを設定
+            _instance = this;
+            
+            // シーン遷移で破壊されないようにする
+            DontDestroyOnLoad(gameObject);
 
             InitializeScreenCanvases();
         }

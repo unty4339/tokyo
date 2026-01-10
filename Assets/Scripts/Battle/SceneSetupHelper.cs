@@ -719,11 +719,20 @@ namespace MonsterBattleGame
             Button achievementButton = CreateScreenButton("AchievementButton", "実績", buttonSize);
             Button systemButton = CreateScreenButton("SystemButton", "システム", buttonSize);
 
-            // 3. 日付表示エリア
+            // 3. 日付表示エリア（プログレスバーを含む）
             GameObject dateAreaObj = new GameObject("DateArea");
             dateAreaObj.transform.SetParent(menuBarObj.transform, false);
             RectTransform dateAreaRect = dateAreaObj.AddComponent<RectTransform>();
-            dateAreaRect.sizeDelta = new Vector2(60, 0);
+            dateAreaRect.sizeDelta = new Vector2(200, 0);
+
+            VerticalLayoutGroup dateAreaLayout = dateAreaObj.AddComponent<VerticalLayoutGroup>();
+            dateAreaLayout.spacing = 3;
+            dateAreaLayout.padding = new RectOffset(5, 5, 0, 0);
+            dateAreaLayout.childAlignment = TextAnchor.MiddleCenter;
+            dateAreaLayout.childControlWidth = true;
+            dateAreaLayout.childControlHeight = false;
+            dateAreaLayout.childForceExpandWidth = true;
+            dateAreaLayout.childForceExpandHeight = false;
 
             GameObject dateObj = new GameObject("DateText");
             dateObj.transform.SetParent(dateAreaObj.transform, false);
@@ -735,11 +744,35 @@ namespace MonsterBattleGame
             dateText.color = Color.white;
 
             RectTransform dateRect = dateObj.GetComponent<RectTransform>();
-            dateRect.anchorMin = Vector2.zero;
-            dateRect.anchorMax = Vector2.one;
-            dateRect.sizeDelta = Vector2.zero;
-            dateRect.offsetMin = new Vector2(5, 0);
-            dateRect.offsetMax = new Vector2(-5, 0);
+            dateRect.sizeDelta = new Vector2(0, 25);
+
+            // 週プログレスバー
+            GameObject progressBarObj = new GameObject("WeekProgressBar");
+            progressBarObj.transform.SetParent(dateAreaObj.transform, false);
+            RectTransform progressBarRect = progressBarObj.AddComponent<RectTransform>();
+            progressBarRect.sizeDelta = new Vector2(0, 20);
+
+            Image progressBarBg = progressBarObj.AddComponent<Image>();
+            progressBarBg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+
+            // プログレスバーのフィル用Image
+            GameObject progressBarFillObj = new GameObject("Fill");
+            progressBarFillObj.transform.SetParent(progressBarObj.transform, false);
+            RectTransform progressBarFillRect = progressBarFillObj.AddComponent<RectTransform>();
+            progressBarFillRect.anchorMin = Vector2.zero;
+            progressBarFillRect.anchorMax = Vector2.one;
+            progressBarFillRect.anchoredPosition = Vector2.zero;
+            progressBarFillRect.sizeDelta = Vector2.zero;
+
+            Image progressBarFill = progressBarFillObj.AddComponent<Image>();
+            progressBarFill.color = new Color(0.3f, 0.6f, 0.9f, 1f);
+            progressBarFill.type = Image.Type.Filled;
+            progressBarFill.fillMethod = Image.FillMethod.Horizontal;
+
+            TimeProgressBar timeProgressBar = progressBarObj.AddComponent<TimeProgressBar>();
+            var timeProgressBarType = typeof(TimeProgressBar);
+            var fillImageField = timeProgressBarType.GetField("fillImage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            fillImageField?.SetValue(timeProgressBar, progressBarFill);
 
             // 4. 時間経過スケール変更ボタンエリア
             GameObject timeScaleAreaObj = new GameObject("TimeScaleArea");
@@ -791,6 +824,89 @@ namespace MonsterBattleGame
             Button speed2xButton = CreateTimeScaleButton("Speed2xButton", "2倍", new Vector2(60, 50));
             Button speed3xButton = CreateTimeScaleButton("Speed3xButton", "3倍", new Vector2(60, 50));
 
+            // 5. トグルボタンエリア（メニューバーの右端に縦並びで配置）
+            GameObject toggleAreaObj = new GameObject("ToggleArea");
+            toggleAreaObj.transform.SetParent(menuBarObj.transform, false);
+            RectTransform toggleAreaRect = toggleAreaObj.AddComponent<RectTransform>();
+            toggleAreaRect.sizeDelta = new Vector2(180, 0);
+
+            VerticalLayoutGroup toggleAreaLayout = toggleAreaObj.AddComponent<VerticalLayoutGroup>();
+            toggleAreaLayout.spacing = 5;
+            toggleAreaLayout.padding = new RectOffset(10, 10, 0, 0);
+            toggleAreaLayout.childAlignment = TextAnchor.MiddleRight;
+            toggleAreaLayout.childControlWidth = false;
+            toggleAreaLayout.childControlHeight = false;
+            toggleAreaLayout.childForceExpandWidth = false;
+            toggleAreaLayout.childForceExpandHeight = false;
+
+            // 右端に配置するためのLayoutElement
+            UnityEngine.UI.LayoutElement toggleAreaLayoutElement = toggleAreaObj.AddComponent<UnityEngine.UI.LayoutElement>();
+            toggleAreaLayoutElement.flexibleWidth = 1f;
+            toggleAreaLayoutElement.preferredWidth = 180f;
+
+            // トグルボタンを作成する関数
+            Toggle CreateToggleButton(string toggleName, string labelText, bool defaultOn = false)
+            {
+                GameObject toggleObj = new GameObject(toggleName);
+                toggleObj.transform.SetParent(toggleAreaObj.transform, false);
+                RectTransform toggleRect = toggleObj.AddComponent<RectTransform>();
+                toggleRect.sizeDelta = new Vector2(160, 30);
+
+                HorizontalLayoutGroup toggleLayout = toggleObj.AddComponent<HorizontalLayoutGroup>();
+                toggleLayout.spacing = 8;
+                toggleLayout.padding = new RectOffset(0, 0, 0, 0);
+                toggleLayout.childAlignment = TextAnchor.MiddleLeft;
+                toggleLayout.childControlWidth = false;
+                toggleLayout.childControlHeight = true;
+                toggleLayout.childForceExpandWidth = false;
+                toggleLayout.childForceExpandHeight = true;
+
+                // チェックボックス
+                GameObject checkmarkObj = new GameObject("Checkmark");
+                checkmarkObj.transform.SetParent(toggleObj.transform, false);
+                RectTransform checkmarkRect = checkmarkObj.AddComponent<RectTransform>();
+                checkmarkRect.sizeDelta = new Vector2(20, 20);
+
+                Image checkmarkBg = checkmarkObj.AddComponent<Image>();
+                checkmarkBg.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+
+                // チェックマーク
+                GameObject checkmarkTickObj = new GameObject("Tick");
+                checkmarkTickObj.transform.SetParent(checkmarkObj.transform, false);
+                RectTransform checkmarkTickRect = checkmarkTickObj.AddComponent<RectTransform>();
+                checkmarkTickRect.anchorMin = Vector2.zero;
+                checkmarkTickRect.anchorMax = Vector2.one;
+                checkmarkTickRect.sizeDelta = Vector2.zero;
+                checkmarkTickRect.offsetMin = new Vector2(2, 2);
+                checkmarkTickRect.offsetMax = new Vector2(-2, -2);
+
+                Image checkmarkTick = checkmarkTickObj.AddComponent<Image>();
+                checkmarkTick.color = Color.white;
+
+                Toggle toggle = checkmarkObj.AddComponent<Toggle>();
+                toggle.targetGraphic = checkmarkBg;
+                toggle.graphic = checkmarkTick;
+                toggle.isOn = defaultOn;
+
+                // ラベルテキスト
+                GameObject labelObj = new GameObject("Label");
+                labelObj.transform.SetParent(toggleObj.transform, false);
+                RectTransform labelRect = labelObj.AddComponent<RectTransform>();
+                labelRect.sizeDelta = new Vector2(130, 30);
+
+                Text labelTextComponent = labelObj.AddComponent<Text>();
+                labelTextComponent.text = labelText;
+                labelTextComponent.font = GetFont();
+                labelTextComponent.fontSize = 14;
+                labelTextComponent.alignment = TextAnchor.MiddleLeft;
+                labelTextComponent.color = Color.white;
+
+                return toggle;
+            }
+
+            Toggle autoPauseToggle = CreateToggleButton("AutoPauseToggle", "イベントは自動で停止", true);
+            Toggle autoOpenWindowToggle = CreateToggleButton("AutoOpenWindowToggle", "イベントは自動で開く", false);
+
             // MenuBarUIコンポーネントを追加
             MenuBarUI menuBarUI = menuBarObj.AddComponent<MenuBarUI>();
 
@@ -837,6 +953,15 @@ namespace MonsterBattleGame
 
             var speed3xButtonField = menuBarUIType.GetField("speed3xButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             speed3xButtonField?.SetValue(menuBarUI, speed3xButton);
+
+            var weekProgressBarField = menuBarUIType.GetField("weekProgressBar", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            weekProgressBarField?.SetValue(menuBarUI, timeProgressBar);
+
+            var autoPauseToggleField = menuBarUIType.GetField("autoPauseToggle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            autoPauseToggleField?.SetValue(menuBarUI, autoPauseToggle);
+
+            var autoOpenWindowToggleField = menuBarUIType.GetField("autoOpenWindowToggle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            autoOpenWindowToggleField?.SetValue(menuBarUI, autoOpenWindowToggle);
 
             // 初期表示を更新
             menuBarUI.RefreshDisplay();

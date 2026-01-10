@@ -17,6 +17,9 @@ namespace MonsterBattleGame
         [SerializeField]
         private List<ClubMember> assignedMembers = new List<ClubMember>();
 
+        [SerializeField]
+        private string description = "";
+
         /// <summary>
         /// 割り当てられる部員の最大数
         /// </summary>
@@ -25,6 +28,16 @@ namespace MonsterBattleGame
             get { return maxMemberCapacity; }
             set { maxMemberCapacity = Mathf.Max(0, value); }
         }
+
+        /// <summary>
+        /// エリアの名称
+        /// </summary>
+        public string AreaName => gameObject.name;
+
+        /// <summary>
+        /// エリアの説明文
+        /// </summary>
+        public string Description => description;
 
         /// <summary>
         /// 現在割り当てられている部員の数

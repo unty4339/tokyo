@@ -88,5 +88,48 @@ namespace MonsterBattleGame
 
             return iconObj;
         }
+
+        /// <summary>
+        /// 空の部員アイコンGameObjectを生成（部員がいないスロット用）
+        /// </summary>
+        /// <param name="size">アイコンのサイズ（幅、高さ）</param>
+        /// <returns>生成された空のアイコンGameObject</returns>
+        public static GameObject CreateEmptyMemberIcon(Vector2 size)
+        {
+            // アイコンオブジェクトを作成
+            GameObject iconObj = new GameObject("EmptyMemberIcon");
+            
+            // RectTransformを追加
+            RectTransform iconRect = iconObj.AddComponent<RectTransform>();
+            iconRect.sizeDelta = size;
+
+            // 背景画像を追加（薄めの色で表示）
+            Image iconImage = iconObj.AddComponent<Image>();
+            iconImage.color = new Color(0.2f, 0.2f, 0.3f, 0.7f);
+
+            // 情報テキストオブジェクトを作成
+            GameObject textObj = new GameObject("InfoText");
+            textObj.transform.SetParent(iconObj.transform, false);
+            
+            // Textコンポーネントを追加
+            Text infoText = textObj.AddComponent<Text>();
+            
+            // テキストを設定
+            infoText.text = "部員なし";
+            infoText.font = GetFont();
+            infoText.fontSize = 14;
+            infoText.alignment = TextAnchor.MiddleCenter;
+            infoText.color = new Color(0.7f, 0.7f, 0.7f, 1f);
+
+            // テキストのRectTransformを設定
+            RectTransform textRect = textObj.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.offsetMin = new Vector2(5, 5);
+            textRect.offsetMax = new Vector2(-5, -5);
+
+            return iconObj;
+        }
     }
 }

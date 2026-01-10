@@ -24,22 +24,38 @@ namespace MonsterBattleGame
         [Header("Date Display")]
         [SerializeField] private Text dateText;
 
+        [Header("Time Progress Bar")]
+        [SerializeField] private TimeProgressBar weekProgressBar;
+
         [Header("Time Scale Buttons")]
         [SerializeField] private Button pauseButton;
         [SerializeField] private Button speed1xButton;
         [SerializeField] private Button speed2xButton;
         [SerializeField] private Button speed3xButton;
 
+        [Header("Incident Settings")]
+        [SerializeField] private Toggle autoPauseToggle;
+        [SerializeField] private Toggle autoOpenWindowToggle;
+
         private GameResourceManager resourceManager;
         private GameTimeManager timeManager;
         private ScreenManager screenManager;
+        private IncidentManager incidentManager;
+        private IncidentUI incidentUI;
         private int currentSpeed = 1;
+        
+        // トグルボタンの状態
+        private bool isAutoPauseEnabled = false;
+        private bool isAutoOpenWindowEnabled = false;
+        private bool hasOpenedWindowForCurrentIncidents = false;
 
         private void Awake()
         {
             resourceManager = GameResourceManager.Instance;
             timeManager = GameTimeManager.Instance;
             screenManager = ScreenManager.Instance;
+            incidentManager = IncidentManager.Instance;
+            incidentUI = FindFirstObjectByType<IncidentUI>();
 
             // 資源変更イベントを購読
             if (resourceManager != null)
@@ -48,11 +64,26 @@ namespace MonsterBattleGame
                 resourceManager.OnMoneyChanged += UpdateMoneyDisplay;
             }
 
+            // インシデント発生イベントを購読
+            if (incidentManager != null)
+            {
+                incidentManager.OnIncidentOccurred += OnIncidentOccurred;
+            }
+
+            // 週変更イベントを購読（フラグリセット用）
+            if (timeManager != null)
+            {
+                timeManager.OnWeekChanged += OnWeekChanged;
+            }
+
             // 画面遷移ボタンのイベント設定
             SetupScreenButtons();
 
             // 時間経過スケール変更ボタンのイベント設定
             SetupTimeScaleButtons();
+
+            // トグルボタンのイベント設定
+            SetupToggleButtons();
         }
 
         private void OnDestroy()
@@ -63,6 +94,16 @@ namespace MonsterBattleGame
                 resourceManager.OnReputationChanged -= UpdateReputationDisplay;
                 resourceManager.OnMoneyChanged -= UpdateMoneyDisplay;
             }
+
+            if (incidentManager != null)
+            {
+                incidentManager.OnIncidentOccurred -= OnIncidentOccurred;
+            }
+
+            if (timeManager != null)
+            {
+                timeManager.OnWeekChanged -= OnWeekChanged;
+            }
         }
 
         private void Update()
@@ -71,6 +112,13 @@ namespace MonsterBattleGame
             if (dateText != null && timeManager != null)
             {
                 dateText.text = timeManager.GetTimeString();
+            }
+
+            // 週プログレスバーを更新
+            if (weekProgressBar != null && timeManager != null)
+            {
+                float progress = timeManager.GetWeekProgress();
+                weekProgressBar.SetProgress(progress);
             }
 
             // 時間経過スケール変更ボタンの状態を更新
@@ -219,6 +267,79 @@ namespace MonsterBattleGame
             if (moneyText != null)
             {
                 moneyText.text = $"資金: {money:N0}円";
+            }
+        }
+
+        /// <summary>
+        /// トグルボタンのイベントを設定
+        /// </summary>
+        private void SetupToggleButtons()
+        {
+            if (autoPauseToggle != null)
+            {
+                autoPauseToggle.onValueChanged.AddListener(OnAutoPauseToggleChanged);
+                isAutoPauseEnabled = autoPauseToggle.isOn;
+            }
+
+            if (autoOpenWindowToggle != null)
+            {
+                autoOpenWindowToggle.onValueChanged.AddListener(OnAutoOpenWindowToggleChanged);
+                isAutoOpenWindowEnabled = autoOpenWindowToggle.isOn;
+            }
+        }
+
+        /// <summary>
+        /// 自動ポーズトグルの値が変更されたときの処理
+        /// </summary>
+        private void OnAutoPauseToggleChanged(bool isOn)
+        {
+            isAutoPauseEnabled = isOn;
+        }
+
+        /// <summary>
+        /// 自動ウィンドウオープントグルの値が変更されたときの処理
+        /// </summary>
+        private void OnAutoOpenWindowToggleChanged(bool isOn)
+        {
+            isAutoOpenWindowEnabled = isOn;
+            // トグルがオフになったら、フラグをリセット（次回のインシデント発生時にウィンドウを開けるように）
+            if (!isOn)
+            {
+                hasOpenedWindowForCurrentIncidents = false;
+            }
+        }
+
+        /// <summary>
+        /// 週が変わったときの処理（フラグリセット用）
+        /// </summary>
+        private void OnWeekChanged(int year, int month, int week)
+        {
+            // 週が変わったら、ウィンドウオープンフラグをリセット
+            hasOpenedWindowForCurrentIncidents = false;
+        }
+
+        /// <summary>
+        /// インシデントが発生したときの処理
+        /// </summary>
+        private void OnIncidentOccurred(IncidentInstance instance)
+        {
+            if (instance == null)
+            {
+                return;
+            }
+
+            // 自動ポーズ機能
+            if (isAutoPauseEnabled && timeManager != null)
+            {
+                timeManager.Pause();
+            }
+
+            // 自動ウィンドウオープン機能
+            // 複数インシデントが同時発生した場合は最初の1つだけ開く
+            if (isAutoOpenWindowEnabled && incidentUI != null && !hasOpenedWindowForCurrentIncidents)
+            {
+                incidentUI.OpenWindow(instance);
+                hasOpenedWindowForCurrentIncidents = true;
             }
         }
 
