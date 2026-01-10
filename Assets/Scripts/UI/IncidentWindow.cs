@@ -5,7 +5,8 @@ namespace MonsterBattleGame
 {
     /// <summary>
     /// インシデントウィンドウの基本機能を提供するコンポーネント
-    /// Prefabのルートに配置され、解決/放置処理を担当
+    /// ウィンドウの開閉やサイズの変更、ウィンドウオブジェクトの削除の責任を持つ
+    /// ひとつのIncidentContentを受け取って作成される
     /// </summary>
     public class IncidentWindow : MonoBehaviour
     {
@@ -17,14 +18,14 @@ namespace MonsterBattleGame
         [SerializeField] private Transform contentArea;
 
         /// <summary>
-        /// このウィンドウが表示しているインシデントインスタンス
+        /// このウィンドウが表示しているIncidentContent
         /// </summary>
-        public IncidentInstance Instance { get; private set; }
+        public IncidentContent Content { get; private set; }
 
         /// <summary>
-        /// 選択肢の情報（IncidentWindowBuilderから設定）
+        /// このウィンドウが表示しているIncidentProcess
         /// </summary>
-        private IncidentWindowOption[] options;
+        public IncidentProcess Process { get; private set; }
 
         private IncidentManager incidentManager;
 
@@ -54,104 +55,59 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
-        /// インシデントインスタンスを設定
+        /// IncidentContentを設定してウィンドウを初期化
         /// </summary>
-        public void SetIncidentInstance(IncidentInstance instance)
+        /// <param name="content">IncidentContent</param>
+        public void SetContent(IncidentContent content)
         {
-            Instance = instance;
-            
-            // 選択肢ボタンのコールバックを設定
-            if (options != null && options.Length > 0)
+            if (content == null)
             {
-                SetupOptionButtons();
-            }
-        }
-
-        /// <summary>
-        /// 選択肢の情報を取得
-        /// </summary>
-        public IncidentWindowOption[] GetOptions()
-        {
-            return options;
-        }
-
-        /// <summary>
-        /// 選択肢の情報を設定（IncidentWindowBuilderから使用）
-        /// </summary>
-        public void SetOptions(IncidentWindowOption[] windowOptions)
-        {
-            options = windowOptions;
-            
-            // すでにInstanceが設定されている場合は、ここでボタンをセットアップする
-            if (Instance != null && options != null && options.Length > 0)
-            {
-                SetupOptionButtons();
-            }
-        }
-
-        /// <summary>
-        /// 選択肢ボタンのコールバックを設定
-        /// </summary>
-        private void SetupOptionButtons()
-        {
-            if (contentArea == null)
-            {
-                throw new System.NullReferenceException("contentArea is null. It must be set before calling SetupOptionButtons.");
-            }
-            if (options == null)
-            {
-                throw new System.NullReferenceException("options is null. SetOptions must be called before setting up option buttons.");
+                Debug.LogError("[IncidentWindow] content is null");
+                return;
             }
 
-            // OptionsContainerを探す
-            Transform optionsContainer = contentArea.Find("OptionsContainer");
-            if (optionsContainer == null)
-            {
-                throw new System.NullReferenceException("OptionsContainer not found in contentArea. Make sure the OptionsContainer exists in the content area.");
-            }
+            Content = content;
+            Process = content.Process;
 
-            // 各選択肢ボタンにコールバックを設定
-            for (int i = 0; i < options.Length && i < optionsContainer.childCount; i++)
+            // コンテンツエリアをクリア
+            if (contentArea != null)
             {
-                Transform buttonTransform = optionsContainer.GetChild(i);
-                Button button = buttonTransform.GetComponent<Button>();
-                if (button != null && options[i] != null)
+                foreach (Transform child in contentArea)
                 {
-                    // 既存のリスナーをクリア
-                    button.onClick.RemoveAllListeners();
-                    
-                    // 新しいリスナーを設定
-                    IncidentWindowOption option = options[i];
-                    button.onClick.AddListener(() =>
-                    {
-                        if (Instance == null)
-                        {
-                            throw new System.NullReferenceException("Instance is null. SetIncidentInstance must be called before using the window.");
-                        }
-                        if (option.OnSelected == null)
-                        {
-                            throw new System.NullReferenceException($"OnSelected callback is null for option at index {i}.");
-                        }
-                        option.OnSelected(Instance);
-                    });
+                    Destroy(child.gameObject);
                 }
+
+                // IncidentContentのCreateChildObjectsメソッドを呼び出して子オブジェクトを作成
+                content.CreateChildObjects(contentArea);
             }
         }
+
+        /// <summary>
+        /// IncidentProcessを設定（後方互換性のため）
+        /// </summary>
+        /// <param name="process">IncidentProcess</param>
+        public void SetProcess(IncidentProcess process)
+        {
+            Process = process;
+        }
+
 
         /// <summary>
         /// 解決ボタンがクリックされたときの処理
         /// </summary>
         public void OnResolve()
         {
-            if (Instance == null)
+            if (Process == null)
             {
-                throw new System.NullReferenceException("Instance is null. SetIncidentInstance must be called before resolving.");
+                Debug.LogWarning("[IncidentWindow] Process is null. Cannot resolve incident.");
+                return;
             }
             if (incidentManager == null)
             {
-                throw new System.NullReferenceException("incidentManager is null. IncidentManager.Instance must be available.");
+                Debug.LogWarning("[IncidentWindow] incidentManager is null. IncidentManager.Instance must be available.");
+                return;
             }
-            incidentManager.ResolveIncident(Instance);
+            incidentManager.ResolveIncident(Process);
 
             CloseWindow();
         }
@@ -161,15 +117,17 @@ namespace MonsterBattleGame
         /// </summary>
         public void OnDismiss()
         {
-            if (Instance == null)
+            if (Process == null)
             {
-                throw new System.NullReferenceException("Instance is null. SetIncidentInstance must be called before dismissing.");
+                Debug.LogWarning("[IncidentWindow] Process is null. Cannot dismiss incident.");
+                return;
             }
             if (incidentManager == null)
             {
-                throw new System.NullReferenceException("incidentManager is null. IncidentManager.Instance must be available.");
+                Debug.LogWarning("[IncidentWindow] incidentManager is null. IncidentManager.Instance must be available.");
+                return;
             }
-            incidentManager.DismissIncident(Instance);
+            incidentManager.DismissIncident(Process);
 
             CloseWindow();
         }
@@ -177,11 +135,11 @@ namespace MonsterBattleGame
         /// <summary>
         /// ウィンドウを閉じる
         /// </summary>
-        private void CloseWindow()
+        public void CloseWindow()
         {
-            if (Instance != null)
+            if (Process != null)
             {
-                Instance.WindowPrefabInstance = null;
+                Process.WindowPrefabInstance = null;
             }
 
             Destroy(gameObject);
@@ -196,7 +154,7 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
-        /// コンテンツエリアを設定（IncidentWindowBuilderから使用）
+        /// コンテンツエリアを設定
         /// </summary>
         public void SetContentArea(Transform area)
         {
@@ -217,6 +175,42 @@ namespace MonsterBattleGame
         public void ShowWindow()
         {
             gameObject.SetActive(true);
+        }
+
+        /// <summary>
+        /// コンテンツを更新（新しいコンテンツで再作成）
+        /// </summary>
+        /// <param name="content">更新するコンテンツ</param>
+        public void UpdateContent(IncidentContent content)
+        {
+            SetContent(content);
+        }
+
+        /// <summary>
+        /// ウィンドウのサイズを変更
+        /// </summary>
+        /// <param name="width">幅</param>
+        /// <param name="height">高さ</param>
+        public void ResizeWindow(float width, float height)
+        {
+            RectTransform rectTransform = GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.sizeDelta = new Vector2(width, height);
+            }
+        }
+
+        /// <summary>
+        /// ウィンドウの位置を変更
+        /// </summary>
+        /// <param name="position">位置</param>
+        public void SetPosition(Vector2 position)
+        {
+            RectTransform rectTransform = GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.anchoredPosition = position;
+            }
         }
     }
 }

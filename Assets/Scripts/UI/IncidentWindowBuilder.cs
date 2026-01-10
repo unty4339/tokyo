@@ -187,24 +187,66 @@ namespace MonsterBattleGame
                     buttonText.alignment = TextAnchor.MiddleCenter;
                     buttonText.color = Color.white;
 
-                    // ボタンのコールバックはSetIncidentInstance()後にSetupOptionButtons()で設定される
-                    // ここではリスナーを設定しない
+                    // ボタンのコールバックを設定
+                    // IncidentWindowのProcessプロパティからIncidentProcessを取得
+                    IncidentWindowOption optionCopy = option; // クロージャーのためにコピー
+                    button.onClick.AddListener(() =>
+                    {
+                        if (windowComponent != null && windowComponent.Process != null && optionCopy.OnSelected != null)
+                        {
+                            optionCopy.OnSelected(windowComponent.Process);
+                        }
+                    });
                 }
             }
 
             // contentAreaを設定（IncidentWindowのGetContentAreaで使用）
             windowComponent.SetContentArea(panelObj.transform);
 
-            // 選択肢の情報を設定（SetIncidentInstance後にコールバックが設定される）
-            windowComponent.SetOptions(options);
-
             return windowRoot;
+        }
+
+        /// <summary>
+        /// コンテンツからインシデントウィンドウを作成
+        /// </summary>
+        /// <param name="content">インシデントコンテンツ</param>
+        /// <returns>IncidentWindowコンポーネント付きGameObject</returns>
+        public static GameObject CreateWindowFromContent(IncidentContent content)
+        {
+            if (content == null)
+            {
+                Debug.LogError("[IncidentWindowBuilder] content is null");
+                return null;
+            }
+
+            // IncidentWindowOptionに変換
+            IncidentWindowOption[] options = null;
+            if (content.HasOptions())
+            {
+                options = new IncidentWindowOption[content.Options.Length];
+                for (int i = 0; i < content.Options.Length; i++)
+                {
+                    var contentOption = content.Options[i];
+                    options[i] = new IncidentWindowOption(contentOption.Label, (process) =>
+                    {
+                        // コンテンツオプションのコールバックを呼び出す
+                        contentOption.OnSelected?.Invoke(process, contentOption.NextStateId);
+                    });
+                }
+            }
+
+            return CreateWindow(
+                content.Title ?? "インシデント",
+                content.ImagePath,
+                content.MessageText ?? "",
+                options
+            );
         }
 
         /// <summary>
         /// フォントを取得（日本語対応）
         /// </summary>
-        private static Font GetFont()
+        public static Font GetFont()
         {
             Font font = Resources.Load<Font>("Fonts/NotoSansJP-Medium");
             if (font == null)

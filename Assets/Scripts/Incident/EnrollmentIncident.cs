@@ -43,12 +43,12 @@ namespace MonsterBattleGame
             // 動的作成を使用
             IncidentWindowOption[] options = new IncidentWindowOption[]
             {
-                new IncidentWindowOption("閉じる", (instance) =>
+                new IncidentWindowOption("閉じる", (process) =>
                 {
                     // インシデントを解決
-                    if (instance != null && IncidentManager.Instance != null)
+                    if (process != null && IncidentManager.Instance != null)
                     {
-                        IncidentManager.Instance.ResolveIncident(instance);
+                        IncidentManager.Instance.ResolveIncident(process);
                     }
                 })
             };
@@ -61,7 +61,7 @@ namespace MonsterBattleGame
             );
         }
 
-        public override void OnResolve(IncidentInstance instance)
+        public override void OnResolve(IncidentProcess process)
         {
             var memberManager = ClubMemberManager.Instance;
             if (memberManager == null)

@@ -13,14 +13,14 @@ namespace MonsterBattleGame
         [SerializeField] private Button clickButton;
 
         /// <summary>
-        /// このアイコンが表示しているインシデントインスタンス
+        /// このアイコンが表示しているインシデントプロセス
         /// </summary>
-        public IncidentInstance Instance { get; private set; }
+        public IncidentProcess Process { get; private set; }
 
         /// <summary>
         /// クリック時のコールバック
         /// </summary>
-        public System.Action<IncidentInstance> OnIconClicked;
+        public System.Action<IncidentProcess> OnIconClicked;
 
         private void Awake()
         {
@@ -42,15 +42,15 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
-        /// インシデントインスタンスを設定
+        /// インシデントプロセスを設定
         /// </summary>
-        public void SetIncidentInstance(IncidentInstance instance)
+        public void SetIncidentProcess(IncidentProcess process)
         {
-            Instance = instance;
+            Process = process;
             
-            if (instance != null && instance.Incident != null && iconImage != null)
+            if (process != null && process.Incident != null && iconImage != null)
             {
-                iconImage.color = instance.Incident.IconColor;
+                iconImage.color = process.Incident.IconColor;
             }
         }
 
@@ -59,11 +59,11 @@ namespace MonsterBattleGame
         /// </summary>
         private void OnButtonClicked()
         {
-            if (Instance == null)
+            if (Process == null)
             {
-                throw new System.NullReferenceException("Instance is null. SetIncidentInstance must be called before the icon can be clicked.");
+                throw new System.NullReferenceException("Process is null. SetIncidentProcess must be called before the icon can be clicked.");
             }
-            OnIconClicked?.Invoke(Instance);
+            OnIconClicked?.Invoke(Process);
         }
     }
 }
