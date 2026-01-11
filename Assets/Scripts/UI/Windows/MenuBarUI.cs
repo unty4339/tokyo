@@ -321,9 +321,9 @@ namespace MonsterBattleGame
         /// <summary>
         /// インシデントが発生したときの処理
         /// </summary>
-        private void OnIncidentOccurred(IncidentProcess process)
+        private void OnIncidentOccurred(IncidentState state)
         {
-            if (process == null)
+            if (state == null)
             {
                 return;
             }
@@ -338,7 +338,7 @@ namespace MonsterBattleGame
             // 複数インシデントが同時発生した場合は最初の1つだけ開く
             if (isAutoOpenWindowEnabled && incidentUI != null && !hasOpenedWindowForCurrentIncidents)
             {
-                incidentUI.OpenWindow(process);
+                incidentUI.OpenWindow(state);
                 hasOpenedWindowForCurrentIncidents = true;
             }
         }

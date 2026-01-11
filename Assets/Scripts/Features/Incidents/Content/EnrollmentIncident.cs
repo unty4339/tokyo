@@ -29,39 +29,22 @@ namespace MonsterBattleGame
 
         public override GameObject GetWindowPrefab()
         {
-            // AddressableManagerで読み込む場合
-            string address = GetWindowPrefabAddress();
-            if (!string.IsNullOrEmpty(address))
-            {
-                GameObject prefab = LoadPrefabFromAddressable(address);
-                if (prefab != null)
-                {
-                    return prefab;
-                }
-            }
-
-            // 動的作成を使用
-            IncidentWindowOption[] options = new IncidentWindowOption[]
-            {
-                new IncidentWindowOption("閉じる", (process) =>
-                {
-                    // インシデントを解決
-                    if (process != null && IncidentManager.Instance != null)
-                    {
-                        IncidentManager.Instance.ResolveIncident(process);
-                    }
-                })
-            };
-
-            return IncidentWindowBuilder.CreateWindow(
-                "入学",
-                null,
-                "部員が入った",
-                options
-            );
+            // このメソッドは使用されない（IncidentStateベースのシステムを使用）
+            return null;
         }
 
-        public override void OnResolve(IncidentProcess process)
+        /// <summary>
+        /// 初期状態を取得（IncidentManagerから呼ばれる）
+        /// </summary>
+        public IncidentState GetInitialState()
+        {
+            return new TextIncidentState("enrollment", "部員が入った", IncidentUrgency.Immediate)
+            {
+                NextStateId = "end"
+            };
+        }
+
+        public override void OnResolve(IncidentState state)
         {
             var memberManager = ClubMemberManager.Instance;
             if (memberManager == null)

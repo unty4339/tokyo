@@ -23,9 +23,9 @@ namespace MonsterBattleGame
         public IncidentContent Content { get; private set; }
 
         /// <summary>
-        /// このウィンドウが表示しているIncidentProcess
+        /// このウィンドウが表示しているIncidentState
         /// </summary>
-        public IncidentProcess Process { get; private set; }
+        public IncidentState State { get; private set; }
 
         private IncidentManager incidentManager;
 
@@ -67,7 +67,7 @@ namespace MonsterBattleGame
             }
 
             Content = content;
-            Process = content.Process;
+            State = content.State;
 
             // コンテンツエリアをクリア
             if (contentArea != null)
@@ -83,12 +83,12 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
-        /// IncidentProcessを設定（後方互換性のため）
+        /// IncidentStateを設定
         /// </summary>
-        /// <param name="process">IncidentProcess</param>
-        public void SetProcess(IncidentProcess process)
+        /// <param name="state">IncidentState</param>
+        public void SetState(IncidentState state)
         {
-            Process = process;
+            State = state;
         }
 
 
@@ -97,9 +97,9 @@ namespace MonsterBattleGame
         /// </summary>
         public void OnResolve()
         {
-            if (Process == null)
+            if (State == null)
             {
-                Debug.LogWarning("[IncidentWindow] Process is null. Cannot resolve incident.");
+                Debug.LogWarning("[IncidentWindow] State is null. Cannot resolve incident.");
                 return;
             }
             if (incidentManager == null)
@@ -107,7 +107,7 @@ namespace MonsterBattleGame
                 Debug.LogWarning("[IncidentWindow] incidentManager is null. IncidentManager.Instance must be available.");
                 return;
             }
-            incidentManager.ResolveIncident(Process);
+            incidentManager.ResolveIncident(State);
 
             CloseWindow();
         }
@@ -117,9 +117,9 @@ namespace MonsterBattleGame
         /// </summary>
         public void OnDismiss()
         {
-            if (Process == null)
+            if (State == null)
             {
-                Debug.LogWarning("[IncidentWindow] Process is null. Cannot dismiss incident.");
+                Debug.LogWarning("[IncidentWindow] State is null. Cannot dismiss incident.");
                 return;
             }
             if (incidentManager == null)
@@ -127,7 +127,7 @@ namespace MonsterBattleGame
                 Debug.LogWarning("[IncidentWindow] incidentManager is null. IncidentManager.Instance must be available.");
                 return;
             }
-            incidentManager.DismissIncident(Process);
+            incidentManager.DismissIncident(State);
 
             CloseWindow();
         }
@@ -137,9 +137,9 @@ namespace MonsterBattleGame
         /// </summary>
         public void CloseWindow()
         {
-            if (Process != null)
+            if (State != null && incidentManager != null)
             {
-                Process.WindowPrefabInstance = null;
+                incidentManager.SetWindowForState(State, null);
             }
 
             Destroy(gameObject);

@@ -43,9 +43,9 @@ namespace MonsterBattleGame
         public IncidentContentType Type { get; set; }
 
         /// <summary>
-        /// このコンテンツを作成したIncidentProcessへの参照
+        /// このコンテンツに対応するIncidentStateへの参照
         /// </summary>
-        public IncidentProcess Process { get; set; }
+        public IncidentState State { get; set; }
 
         /// <summary>
         /// コンストラクタ
@@ -63,11 +63,10 @@ namespace MonsterBattleGame
         public abstract Transform CreateChildObjects(Transform parent);
 
         /// <summary>
-        /// 自身を作成したIncidentProcessにIncidentActionクラスを作成して渡す機能
+        /// 自身を作成したIncidentStateに対してIncidentActionクラスを作成してIncidentManagerに渡す機能
         /// </summary>
         /// <param name="action">選択されたアクション</param>
-        /// <param name="process">IncidentProcess</param>
-        public virtual void OnActionSelected(IncidentAction action, IncidentProcess process)
+        public virtual void OnActionSelected(IncidentAction action)
         {
             if (action == null)
             {
@@ -75,34 +74,30 @@ namespace MonsterBattleGame
                 return;
             }
 
-            if (process == null)
+            if (State == null)
             {
-                Debug.LogWarning("[IncidentContent] process is null");
+                Debug.LogWarning("[IncidentContent] State is null");
                 return;
             }
 
-            // Processにアクションを適用
-            IncidentState nextState = process.ApplyAction(action);
+            var incidentManager = IncidentManager.Instance;
+            if (incidentManager == null)
+            {
+                Debug.LogWarning("[IncidentContent] IncidentManager.Instance is null. Cannot apply action.");
+                return;
+            }
+
+            // IncidentManagerにアクションを適用
+            IncidentState nextState = incidentManager.ApplyAction(State, action);
             if (nextState == null)
             {
-                // インシデント終了
+                // インシデント終了（IncidentManagerで既に解決処理が実行されている）
                 Debug.Log("[IncidentContent] Incident ended");
-                
-                // インシデントプロセスを削除しマネージャからも消す、ウィンドウも閉じる
-                var incidentManager = IncidentManager.Instance;
-                if (incidentManager != null)
-                {
-                    incidentManager.ResolveIncident(process);
-                }
-                else
-                {
-                    Debug.LogWarning("[IncidentContent] IncidentManager.Instance is null. Cannot resolve incident.");
-                }
             }
             else
             {
                 // 次の状態が設定されたので、新しいコンテンツを作成してウィンドウを更新する必要がある
-                // ただし、これはIncidentWindowまたはIncidentUIの責任になる可能性がある
+                // これはIncidentWindowまたはIncidentUIの責任になる
                 Debug.Log($"[IncidentContent] State transitioned to: {nextState.GetStateId()}");
             }
         }

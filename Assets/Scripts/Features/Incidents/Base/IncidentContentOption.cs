@@ -18,22 +18,14 @@ namespace MonsterBattleGame
         public string NextStateId { get; set; }
 
         /// <summary>
-        /// 選択時のコールバック
-        /// 引数: IncidentProcess, 選択した選択肢のID（NextStateId）
-        /// </summary>
-        public Action<IncidentProcess, string> OnSelected { get; set; }
-
-        /// <summary>
         /// コンストラクタ
         /// </summary>
         /// <param name="label">表示ラベル</param>
         /// <param name="nextStateId">遷移先のstate ID</param>
-        /// <param name="onSelected">選択時のコールバック（オプショナル）</param>
-        public IncidentContentOption(string label, string nextStateId = null, Action<IncidentProcess, string> onSelected = null)
+        public IncidentContentOption(string label, string nextStateId = null)
         {
             Label = label;
             NextStateId = nextStateId;
-            OnSelected = onSelected;
         }
     }
 }

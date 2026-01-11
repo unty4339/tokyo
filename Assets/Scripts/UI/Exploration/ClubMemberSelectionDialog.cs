@@ -72,7 +72,7 @@ namespace MonsterBattleGame
             windowRect.anchorMin = new Vector2(0.5f, 0.5f);
             windowRect.anchorMax = new Vector2(0.5f, 0.5f);
             windowRect.sizeDelta = new Vector2(800, 600);
-            windowRect.anchoredPosition = Vector2.zero;
+            windowRect.anchoredPosition = new Vector2(0, 50);
 
             // 背景パネル
             Image background = windowObj.AddComponent<Image>();

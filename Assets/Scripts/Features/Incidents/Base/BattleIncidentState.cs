@@ -38,12 +38,18 @@ namespace MonsterBattleGame
         private string stateId;
 
         /// <summary>
+        /// 戦闘結果に基づく次の状態を作成する関数
+        /// </summary>
+        public System.Func<BattleResult, IncidentState> OnBattleEndTransition { get; set; }
+
+        /// <summary>
         /// コンストラクタ
         /// </summary>
         /// <param name="playerTeam">プレイヤーチーム</param>
         /// <param name="enemyTeam">敵チーム</param>
         /// <param name="stateId">状態ID（オプショナル）</param>
-        public BattleIncidentState(Team playerTeam, Team enemyTeam, string stateId = "battle")
+        /// <param name="timeLimitWeeks">期限（週数）。nullの場合は期限なし</param>
+        public BattleIncidentState(Team playerTeam, Team enemyTeam, string stateId = "battle", int? timeLimitWeeks = null)
         {
             PlayerTeam = playerTeam;
             EnemyTeam = enemyTeam;
@@ -51,6 +57,7 @@ namespace MonsterBattleGame
             StateName = stateId;
             Urgency = IncidentUrgency.Immediate; // 戦闘は常に即時解決が必要
             IsBattleStarted = false;
+            TimeLimitWeeks = timeLimitWeeks;
         }
 
         /// <summary>
@@ -110,6 +117,53 @@ namespace MonsterBattleGame
         public void SetBattleResult(BattleResult result)
         {
             Result = result;
+        }
+
+        /// <summary>
+        /// IncidentContentを作成
+        /// </summary>
+        /// <returns>作成されたコンテンツ</returns>
+        public override IncidentContent CreateContent()
+        {
+            return IncidentContentFactory.CreateBattleContent(this);
+        }
+
+        /// <summary>
+        /// 状態遷移
+        /// </summary>
+        /// <param name="action">アクション。nullの場合は時間切れを意味する。戦闘結果の場合はBattleResultAction</param>
+        /// <returns>次の状態。nullの場合はインシデント終了</returns>
+        public override IncidentState Translate(IncidentAction action)
+        {
+            // 時間切れの場合
+            if (action == null)
+            {
+                return null; // 終了
+            }
+
+            // 戦闘結果アクションの場合
+            if (action is BattleResultAction battleResultAction)
+            {
+                if (OnBattleEndTransition != null)
+                {
+                    return OnBattleEndTransition(battleResultAction.BattleResult);
+                }
+                // デフォルトの処理：勝敗に応じた状態を返す
+                if (battleResultAction.BattleResult != null)
+                {
+                    if (battleResultAction.BattleResult.Result == BattleState.PlayerWon)
+                    {
+                        return new TextIncidentState("battle_won", "戦闘に勝利した！", IncidentUrgency.Deferrable);
+                    }
+                    else
+                    {
+                        return new TextIncidentState("battle_lost", "戦闘に敗北した...", IncidentUrgency.Deferrable);
+                    }
+                }
+            }
+
+            // その他のアクションの場合は終了しない（継続）
+            return null;
         }
     }
 }

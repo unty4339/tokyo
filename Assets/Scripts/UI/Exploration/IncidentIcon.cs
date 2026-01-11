@@ -15,14 +15,14 @@ namespace MonsterBattleGame
         [SerializeField] private Button clickButton;
 
         /// <summary>
-        /// このアイコンが表示しているIncidentProcess
+        /// このアイコンが表示しているIncidentState
         /// </summary>
-        public IncidentProcess Process { get; private set; }
+        public IncidentState State { get; private set; }
 
         /// <summary>
         /// クリック時のコールバック
         /// </summary>
-        public System.Action<IncidentProcess> OnIconClicked;
+        public System.Action<IncidentState> OnIconClicked;
 
         /// <summary>
         /// 即時解決が必要な場合の色
@@ -54,14 +54,14 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
-        /// IncidentProcessを設定
+        /// IncidentStateを設定
         /// </summary>
-        /// <param name="process">IncidentProcess</param>
-        public void SetIncidentProcess(IncidentProcess process)
+        /// <param name="state">IncidentState</param>
+        public void SetIncidentState(IncidentState state)
         {
-            Process = process;
+            State = state;
 
-            if (process != null)
+            if (state != null)
             {
                 UpdateAppearance();
             }
@@ -72,21 +72,13 @@ namespace MonsterBattleGame
         /// </summary>
         public void UpdateAppearance()
         {
-            if (Process == null || iconImage == null)
+            if (State == null || iconImage == null)
             {
                 return;
             }
 
             // 現在の状態のUrgencyを確認
-            IncidentUrgency urgency = IncidentUrgency.Deferrable;
-            if (Process.CurrentState != null)
-            {
-                urgency = Process.CurrentState.Urgency;
-            }
-            else if (Process.InitialState != null)
-            {
-                urgency = Process.InitialState.Urgency;
-            }
+            IncidentUrgency urgency = State.Urgency;
 
             // Urgencyに応じて色を変更
             if (urgency == IncidentUrgency.Immediate)
@@ -99,23 +91,28 @@ namespace MonsterBattleGame
             }
 
             // Incident定義のIconColorも考慮する場合
-            if (Process.Incident != null)
+            var incidentManager = IncidentManager.Instance;
+            if (incidentManager != null)
             {
-                // 基色をIncidentのIconColorに設定し、Urgencyに応じて調整
-                Color baseColor = Process.Incident.IconColor;
-                if (urgency == IncidentUrgency.Immediate)
+                Incident incident = incidentManager.GetIncidentForState(State);
+                if (incident != null)
                 {
-                    // 即時解決が必要な場合は少し赤みを追加
-                    iconImage.color = new Color(
-                        Mathf.Min(1f, baseColor.r + 0.3f),
-                        baseColor.g * 0.7f,
-                        baseColor.b * 0.7f,
-                        baseColor.a
-                    );
-                }
-                else
-                {
-                    iconImage.color = baseColor;
+                    // 基色をIncidentのIconColorに設定し、Urgencyに応じて調整
+                    Color baseColor = incident.IconColor;
+                    if (urgency == IncidentUrgency.Immediate)
+                    {
+                        // 即時解決が必要な場合は少し赤みを追加
+                        iconImage.color = new Color(
+                            Mathf.Min(1f, baseColor.r + 0.3f),
+                            baseColor.g * 0.7f,
+                            baseColor.b * 0.7f,
+                            baseColor.a
+                        );
+                    }
+                    else
+                    {
+                        iconImage.color = baseColor;
+                    }
                 }
             }
         }
@@ -125,13 +122,13 @@ namespace MonsterBattleGame
         /// </summary>
         private void OnButtonClicked()
         {
-            if (Process == null)
+            if (State == null)
             {
-                Debug.LogWarning("[IncidentIcon] Process is null");
+                Debug.LogWarning("[IncidentIcon] State is null");
                 return;
             }
 
-            OnIconClicked?.Invoke(Process);
+            OnIconClicked?.Invoke(State);
         }
 
         /// <summary>

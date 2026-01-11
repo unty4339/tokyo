@@ -7,6 +7,7 @@ namespace MonsterBattleGame
 {
     /// <summary>
     /// インシデントの発生・管理を行うシングルトン
+    /// IncidentStateインスタンスを保持している
     /// </summary>
     public class IncidentManager : MonoBehaviour
     {
@@ -25,9 +26,29 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
-        /// アクティブなインシデントのリスト（IncidentProcess）
+        /// アクティブなインシデント状態のリスト
         /// </summary>
-        private List<IncidentProcess> activeIncidents = new List<IncidentProcess>();
+        private List<IncidentState> activeStates = new List<IncidentState>();
+
+        /// <summary>
+        /// 各IncidentStateの開始週を管理する辞書
+        /// </summary>
+        private Dictionary<IncidentState, int> stateStartWeeks = new Dictionary<IncidentState, int>();
+
+        /// <summary>
+        /// 各IncidentStateに対応するIncidentIconを管理する辞書
+        /// </summary>
+        private Dictionary<IncidentState, IncidentIcon> stateIcons = new Dictionary<IncidentState, IncidentIcon>();
+
+        /// <summary>
+        /// 各IncidentStateに対応するウィンドウインスタンスを管理する辞書
+        /// </summary>
+        private Dictionary<IncidentState, GameObject> stateWindows = new Dictionary<IncidentState, GameObject>();
+
+        /// <summary>
+        /// 各IncidentStateに対応するIncident定義を管理する辞書
+        /// </summary>
+        private Dictionary<IncidentState, Incident> stateIncidents = new Dictionary<IncidentState, Incident>();
 
         /// <summary>
         /// 登録されているインシデント定義のリスト
@@ -37,15 +58,15 @@ namespace MonsterBattleGame
         private GameTimeManager timeManager;
 
         // イベント
-        public event Action<IncidentProcess> OnIncidentOccurred;
-        public event Action<IncidentProcess> OnIncidentResolved;
-        public event Action<IncidentProcess> OnIncidentDismissed;
-        public event Action<IncidentProcess> OnIncidentExpired;
+        public event Action<IncidentState> OnIncidentOccurred;
+        public event Action<IncidentState> OnIncidentResolved;
+        public event Action<IncidentState> OnIncidentDismissed;
+        public event Action<IncidentState> OnIncidentExpired;
 
         /// <summary>
-        /// アクティブなインシデントのリストを取得（読み取り専用）
+        /// アクティブなインシデント状態のリストを取得（読み取り専用）
         /// </summary>
-        public IReadOnlyList<IncidentProcess> ActiveIncidents => activeIncidents;
+        public IReadOnlyList<IncidentState> ActiveStates => activeStates;
 
         private void Awake()
         {
@@ -121,6 +142,59 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
+        /// IncidentStateインスタンスを登録する
+        /// </summary>
+        /// <param name="state">登録するIncidentState</param>
+        /// <param name="startWeek">開始週（累積週数）</param>
+        /// <param name="incident">対応するIncident定義（オプショナル）</param>
+        public void Register(IncidentState state, int startWeek, Incident incident = null)
+        {
+            if (state == null)
+            {
+                Debug.LogWarning("[IncidentManager] state is null");
+                return;
+            }
+
+            if (activeStates.Contains(state))
+            {
+                Debug.LogWarning($"[IncidentManager] state {state.GetStateId()} is already registered");
+                return;
+            }
+
+            activeStates.Add(state);
+            stateStartWeeks[state] = startWeek;
+            if (incident != null)
+            {
+                stateIncidents[state] = incident;
+            }
+
+            // IncidentIconを作成
+            CreateIconForState(state, incident);
+
+            // 必須インシデント、または即時解決が必要なインシデントの場合は自動的にポーズ
+            if (timeManager != null)
+            {
+                if ((incident != null && incident.IsMandatory) || HasImmediateIncidents())
+                {
+                    timeManager.Pause();
+                }
+            }
+
+            OnIncidentOccurred?.Invoke(state);
+        }
+
+        /// <summary>
+        /// IncidentStateに対応するIncidentIconを作成
+        /// </summary>
+        private void CreateIconForState(IncidentState state, Incident incident)
+        {
+            // IncidentUIが存在する場合は、そこでアイコンを作成する
+            // ここでは辞書に登録のみ行う（実際の作成はIncidentUIで行う）
+            // 仕様書によるとIncidentManagerがアイコン作成を担当するが、
+            // UIの実装詳細はIncidentUIに委譲する
+        }
+
+        /// <summary>
         /// 条件をチェックして新しいインシデントを発生
         /// </summary>
         private void CheckAndTriggerIncidents(int year, int month, int week, int totalWeeks)
@@ -128,7 +202,7 @@ namespace MonsterBattleGame
             foreach (var incident in registeredIncidents)
             {
                 // 既にアクティブなインシデントはスキップ
-                if (activeIncidents.Any(process => process.Incident.Id == incident.Id))
+                if (activeStates.Any(state => stateIncidents.ContainsKey(state) && stateIncidents[state].Id == incident.Id))
                 {
                     continue;
                 }
@@ -147,48 +221,31 @@ namespace MonsterBattleGame
         /// </summary>
         private void TriggerIncident(Incident incident, int totalWeeks)
         {
-            // 初期状態を取得
             IncidentState initialState = null;
-            IncidentProcess process = null;
             
             if (incident is ExplorationIncident explorationIncident)
             {
-                // ExplorationIncidentの場合は、IncidentProcessを作成してから初期状態を取得
-                // 暫定的にnullの初期状態でIncidentProcessを作成
-                process = new IncidentProcess(incident, null, totalWeeks);
-                
-                // GetInitialStateはIncidentProcessを受け取るように変更されているため、processを渡す
-                initialState = explorationIncident.GetInitialState(process);
-                
-                // 初期状態を設定
-                if (initialState != null)
-                {
-                    process.CurrentState = initialState;
-                    process.InitialState = initialState;
-                    if (!process.StateHistory.Contains(initialState))
-                    {
-                        process.StateHistory.Add(initialState);
-                    }
-                }
+                // ExplorationIncidentの場合は初期状態を取得
+                initialState = explorationIncident.GetInitialState();
             }
             else
             {
-                // ExplorationIncident以外の場合は、初期状態なしで作成
-                process = new IncidentProcess(incident, null, totalWeeks);
-            }
-
-            activeIncidents.Add(process);
-
-            // 必須インシデント、または即時解決が必要なインシデントの場合は自動的にポーズ
-            if (timeManager != null)
-            {
-                if (incident.IsMandatory || HasImmediateIncidents())
+                // その他のIncidentタイプの場合、GetInitialStateメソッドがあれば呼び出す
+                var method = incident.GetType().GetMethod("GetInitialState", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (method != null && method.ReturnType == typeof(IncidentState))
                 {
-                    timeManager.Pause();
+                    initialState = method.Invoke(incident, null) as IncidentState;
                 }
             }
 
-            OnIncidentOccurred?.Invoke(process);
+            if (initialState != null)
+            {
+                Register(initialState, totalWeeks, incident);
+            }
+            else
+            {
+                Debug.LogWarning($"[IncidentManager] Failed to get initial state for incident: {incident.Id}");
+            }
         }
 
         /// <summary>
@@ -209,7 +266,7 @@ namespace MonsterBattleGame
             }
 
             // 既にアクティブなインシデントはスキップ
-            if (activeIncidents.Any(process => process.Incident.Id == incident.Id))
+            if (activeStates.Any(state => stateIncidents.ContainsKey(state) && stateIncidents[state].Id == incident.Id))
             {
                 Debug.Log($"[IncidentManager] インシデント {incident.Id} は既にアクティブです。");
                 return;
@@ -217,38 +274,32 @@ namespace MonsterBattleGame
 
             int totalWeeks = CalculateTotalWeeks(year, month, week);
             
-            // IncidentProcessを作成（初期状態は後で設定）
-            var process = new IncidentProcess(incident, initialState, totalWeeks);
-            
             // 初期状態が指定されていない場合は取得
-            if (initialState == null && incident is ExplorationIncident explorationIncident)
+            if (initialState == null)
             {
-                initialState = explorationIncident.GetInitialState(process);
-                
-                // 初期状態を設定
-                if (initialState != null)
+                if (incident is ExplorationIncident explorationIncident)
                 {
-                    process.CurrentState = initialState;
-                    process.InitialState = initialState;
-                    if (!process.StateHistory.Contains(initialState))
+                    initialState = explorationIncident.GetInitialState();
+                }
+                else
+                {
+                    // その他のIncidentタイプの場合、GetInitialStateメソッドがあれば呼び出す
+                    var method = incident.GetType().GetMethod("GetInitialState", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (method != null && method.ReturnType == typeof(IncidentState))
                     {
-                        process.StateHistory.Add(initialState);
+                        initialState = method.Invoke(incident, null) as IncidentState;
                     }
                 }
             }
 
-            activeIncidents.Add(process);
-
-            // 必須インシデント、または即時解決が必要なインシデントの場合は自動的にポーズ
-            if (timeManager != null)
+            if (initialState != null)
             {
-                if (incident.IsMandatory || HasImmediateIncidents())
-                {
-                    timeManager.Pause();
-                }
+                Register(initialState, totalWeeks, incident);
             }
-
-            OnIncidentOccurred?.Invoke(process);
+            else
+            {
+                Debug.LogWarning($"[IncidentManager] Failed to get initial state for incident: {incident.Id}");
+            }
         }
 
         /// <summary>
@@ -268,11 +319,35 @@ namespace MonsterBattleGame
         /// </summary>
         private void CheckExpiredIncidents(int totalWeeks)
         {
-            var expiredIncidents = activeIncidents.Where(process => process.IsExpired(totalWeeks) && !process.Incident.IsMandatory).ToList();
+            var expiredStates = new List<IncidentState>();
             
-            foreach (var expired in expiredIncidents)
+            foreach (var state in activeStates)
             {
-                activeIncidents.Remove(expired);
+                if (!stateStartWeeks.ContainsKey(state))
+                {
+                    continue;
+                }
+
+                int startWeek = stateStartWeeks[state];
+                int? timeLimitWeeks = state.TimeLimitWeeks;
+                
+                if (timeLimitWeeks.HasValue)
+                {
+                    int expiryWeek = startWeek + timeLimitWeeks.Value;
+                    if (totalWeeks >= expiryWeek)
+                    {
+                        // 必須インシデントでない場合のみ期限切れ
+                        if (!stateIncidents.ContainsKey(state) || !stateIncidents[state].IsMandatory)
+                        {
+                            expiredStates.Add(state);
+                        }
+                    }
+                }
+            }
+            
+            foreach (var expired in expiredStates)
+            {
+                Unregister(expired);
                 OnIncidentExpired?.Invoke(expired);
             }
         }
@@ -283,66 +358,155 @@ namespace MonsterBattleGame
         /// <returns>即時解決が必要なインシデントがある場合はtrue</returns>
         public bool HasImmediateIncidents()
         {
-            return activeIncidents.Any(process =>
-            {
-                if (process.CurrentState != null)
-                {
-                    return process.CurrentState.Urgency == IncidentUrgency.Immediate;
-                }
-                else if (process.InitialState != null)
-                {
-                    return process.InitialState.Urgency == IncidentUrgency.Immediate;
-                }
-                // 状態がない場合は、必須インシデントかどうかで判定
-                return process.Incident != null && process.Incident.IsMandatory;
-            });
+            return activeStates.Any(state => state.IsImmediately());
         }
 
         /// <summary>
         /// インシデントを解決（アイコンを消す）
         /// </summary>
-        public void ResolveIncident(IncidentProcess process)
+        public void ResolveIncident(IncidentState state)
         {
-            if (process == null || !activeIncidents.Contains(process))
+            if (state == null || !activeStates.Contains(state))
             {
                 return;
             }
 
             // インシデントの解決処理を実行
-            if (process.Incident != null)
+            if (stateIncidents.ContainsKey(state))
             {
-                process.Incident.OnResolve(process);
+                stateIncidents[state].OnResolve(state);
             }
 
-            activeIncidents.Remove(process);
-            OnIncidentResolved?.Invoke(process);
-
-            // ウィンドウを破棄
-            if (process.WindowPrefabInstance != null)
-            {
-                Destroy(process.WindowPrefabInstance);
-                process.WindowPrefabInstance = null;
-            }
+            Unregister(state);
+            OnIncidentResolved?.Invoke(state);
         }
 
         /// <summary>
         /// インシデントを放置（アイコンは残す）
         /// </summary>
-        public void DismissIncident(IncidentProcess process)
+        public void DismissIncident(IncidentState state)
         {
-            if (process == null || !activeIncidents.Contains(process))
+            if (state == null || !activeStates.Contains(state))
             {
                 return;
             }
 
-            OnIncidentDismissed?.Invoke(process);
+            OnIncidentDismissed?.Invoke(state);
 
             // ウィンドウを破棄
-            if (process.WindowPrefabInstance != null)
+            if (stateWindows.ContainsKey(state) && stateWindows[state] != null)
             {
-                Destroy(process.WindowPrefabInstance);
-                process.WindowPrefabInstance = null;
+                Destroy(stateWindows[state]);
+                stateWindows.Remove(state);
             }
+        }
+
+        /// <summary>
+        /// インシデント状態を登録解除
+        /// </summary>
+        private void Unregister(IncidentState state)
+        {
+            activeStates.Remove(state);
+            stateStartWeeks.Remove(state);
+            
+            // アイコンを削除
+            if (stateIcons.ContainsKey(state))
+            {
+                if (stateIcons[state] != null)
+                {
+                    stateIcons[state].Remove();
+                }
+                stateIcons.Remove(state);
+            }
+
+            // ウィンドウを削除
+            if (stateWindows.ContainsKey(state))
+            {
+                if (stateWindows[state] != null)
+                {
+                    Destroy(stateWindows[state]);
+                }
+                stateWindows.Remove(state);
+            }
+
+            stateIncidents.Remove(state);
+        }
+
+        /// <summary>
+        /// アクションを適用して状態遷移を実行
+        /// </summary>
+        /// <param name="state">現在の状態</param>
+        /// <param name="action">アクション。nullの場合は時間切れを意味する</param>
+        /// <returns>次の状態。nullの場合はインシデント終了</returns>
+        public IncidentState ApplyAction(IncidentState state, IncidentAction action)
+        {
+            if (state == null || !activeStates.Contains(state))
+            {
+                Debug.LogWarning("[IncidentManager] state is null or not registered");
+                return null;
+            }
+
+            IncidentState nextState = state.Translate(action);
+            
+            if (nextState == null)
+            {
+                // インシデント終了
+                ResolveIncident(state);
+                return null;
+            }
+            else
+            {
+                // 状態を更新
+                int startWeek = stateStartWeeks.ContainsKey(state) ? stateStartWeeks[state] : 0;
+                Incident incident = stateIncidents.ContainsKey(state) ? stateIncidents[state] : null;
+                
+                Unregister(state);
+                Register(nextState, startWeek, incident);
+                
+                // アイコンの見た目を更新
+                if (stateIcons.ContainsKey(nextState))
+                {
+                    stateIcons[nextState].UpdateAppearance();
+                }
+                
+                return nextState;
+            }
+        }
+
+        /// <summary>
+        /// 状態に対応するIncidentを取得
+        /// </summary>
+        public Incident GetIncidentForState(IncidentState state)
+        {
+            return stateIncidents.ContainsKey(state) ? stateIncidents[state] : null;
+        }
+
+        /// <summary>
+        /// 状態に対応するウィンドウを取得
+        /// </summary>
+        public GameObject GetWindowForState(IncidentState state)
+        {
+            return stateWindows.ContainsKey(state) ? stateWindows[state] : null;
+        }
+
+        /// <summary>
+        /// 状態に対応するウィンドウを設定
+        /// </summary>
+        public void SetWindowForState(IncidentState state, GameObject window)
+        {
+            if (stateWindows.ContainsKey(state) && stateWindows[state] != null)
+            {
+                Destroy(stateWindows[state]);
+            }
+            stateWindows[state] = window;
+        }
+
+        /// <summary>
+        /// 状態に対応するアイコンを設定
+        /// </summary>
+        public void SetIconForState(IncidentState state, IncidentIcon icon)
+        {
+            stateIcons[state] = icon;
         }
 
         /// <summary>

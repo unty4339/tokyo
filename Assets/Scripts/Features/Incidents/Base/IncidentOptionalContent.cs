@@ -66,7 +66,7 @@ namespace MonsterBattleGame
 
                 Text titleText = titleObj.AddComponent<Text>();
                 titleText.text = Title;
-                titleText.font = IncidentWindowBuilder.GetFont();
+                titleText.font = IncidentOptionalContentWindowBuilder.GetFont();
                 titleText.fontSize = 24;
                 titleText.alignment = TextAnchor.MiddleCenter;
                 titleText.color = Color.white;
@@ -85,7 +85,7 @@ namespace MonsterBattleGame
 
                 Text messageTextComponent = messageObj.AddComponent<Text>();
                 messageTextComponent.text = MessageText;
-                messageTextComponent.font = IncidentWindowBuilder.GetFont();
+                messageTextComponent.font = IncidentOptionalContentWindowBuilder.GetFont();
                 messageTextComponent.fontSize = 18;
                 messageTextComponent.alignment = TextAnchor.MiddleCenter;
                 messageTextComponent.color = Color.white;
@@ -142,16 +142,16 @@ namespace MonsterBattleGame
 
                     Text buttonText = buttonTextObj.AddComponent<Text>();
                     buttonText.text = option.Label;
-                    buttonText.font = IncidentWindowBuilder.GetFont();
+                    buttonText.font = IncidentOptionalContentWindowBuilder.GetFont();
                     buttonText.fontSize = 16;
                     buttonText.alignment = TextAnchor.MiddleCenter;
                     buttonText.color = Color.white;
 
-                    // ボタンクリック時にIncidentActionを生成してProcessに渡す
+                    // ボタンクリック時にIncidentActionを生成してIncidentManagerに渡す
                     string actionId = option.NextStateId ?? option.Label;
                     button.onClick.AddListener(() =>
                     {
-                        OnActionSelected(new IncidentAction(actionId), Process);
+                        OnActionSelected(new IncidentAction(actionId));
                     });
                 }
             }

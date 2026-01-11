@@ -13,14 +13,14 @@ namespace MonsterBattleGame
         [SerializeField] private Button clickButton;
 
         /// <summary>
-        /// このアイコンが表示しているインシデントプロセス
+        /// このアイコンが表示しているIncidentState
         /// </summary>
-        public IncidentProcess Process { get; private set; }
+        public IncidentState State { get; private set; }
 
         /// <summary>
         /// クリック時のコールバック
         /// </summary>
-        public System.Action<IncidentProcess> OnIconClicked;
+        public System.Action<IncidentState> OnIconClicked;
 
         private void Awake()
         {
@@ -42,15 +42,23 @@ namespace MonsterBattleGame
         }
 
         /// <summary>
-        /// インシデントプロセスを設定
+        /// IncidentStateを設定
         /// </summary>
-        public void SetIncidentProcess(IncidentProcess process)
+        public void SetIncidentState(IncidentState state)
         {
-            Process = process;
+            State = state;
             
-            if (process != null && process.Incident != null && iconImage != null)
+            if (state != null && iconImage != null)
             {
-                iconImage.color = process.Incident.IconColor;
+                var incidentManager = IncidentManager.Instance;
+                if (incidentManager != null)
+                {
+                    Incident incident = incidentManager.GetIncidentForState(state);
+                    if (incident != null)
+                    {
+                        iconImage.color = incident.IconColor;
+                    }
+                }
             }
         }
 
@@ -59,11 +67,11 @@ namespace MonsterBattleGame
         /// </summary>
         private void OnButtonClicked()
         {
-            if (Process == null)
+            if (State == null)
             {
-                throw new System.NullReferenceException("Process is null. SetIncidentProcess must be called before the icon can be clicked.");
+                throw new System.NullReferenceException("State is null. SetIncidentState must be called before the icon can be clicked.");
             }
-            OnIconClicked?.Invoke(Process);
+            OnIconClicked?.Invoke(State);
         }
     }
 }

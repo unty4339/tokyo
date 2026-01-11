@@ -5,20 +5,22 @@ using UnityEngine.UI;
 namespace MonsterBattleGame
 {
     /// <summary>
-    /// インシデントウィンドウを動的に作成する静的クラス
+    /// IncidentOptionalContent専用のインシデントウィンドウを動的に作成する静的クラス
     /// </summary>
-    public static class IncidentWindowBuilder
+    public static class IncidentOptionalContentWindowBuilder
     {
         /// <summary>
-        /// インシデントウィンドウを動的に作成
+        /// インシデントウィンドウを動的に作成（内部メソッド）
         /// </summary>
         /// <param name="title">インシデント名（タイトル）</param>
         /// <param name="imagePath">画像のパス（オプショナル、null可）</param>
         /// <param name="messageText">表示するテキスト</param>
         /// <param name="options">選択肢の配列</param>
+        /// <param name="content">IncidentContent（アクション処理用）</param>
         /// <returns>IncidentWindowコンポーネント付きGameObject</returns>
-        public static GameObject CreateWindow(string title, string imagePath, string messageText, IncidentWindowOption[] options)
+        private static GameObject CreateWindow(string title, string imagePath, string messageText, IncidentContentOption[] options, IncidentContent content)
         {
+            Debug.Log($"CreateWindow: {title}, {imagePath}, {messageText}, {options?.Length ?? 0}");
             // ルートオブジェクトを作成
             GameObject windowRoot = new GameObject("IncidentWindow");
             RectTransform rootRect = windowRoot.AddComponent<RectTransform>();
@@ -132,6 +134,7 @@ namespace MonsterBattleGame
             messageTextComponent.alignment = TextAnchor.MiddleCenter;
             messageTextComponent.color = Color.white;
 
+
             // 選択肢ボタンを作成
             if (options != null && options.Length > 0)
             {
@@ -155,7 +158,7 @@ namespace MonsterBattleGame
 
                 for (int i = 0; i < options.Length; i++)
                 {
-                    IncidentWindowOption option = options[i];
+                    IncidentContentOption option = options[i];
                     if (option == null)
                     {
                         continue;
@@ -188,13 +191,15 @@ namespace MonsterBattleGame
                     buttonText.color = Color.white;
 
                     // ボタンのコールバックを設定
-                    // IncidentWindowのProcessプロパティからIncidentProcessを取得
-                    IncidentWindowOption optionCopy = option; // クロージャーのためにコピー
+                    // IncidentContentのOnActionSelectedを呼び出す
+                    string actionId = option.NextStateId ?? option.Label;
+                    IncidentContentOption optionCopy = option; // クロージャーのためにコピー
                     button.onClick.AddListener(() =>
                     {
-                        if (windowComponent != null && windowComponent.Process != null && optionCopy.OnSelected != null)
+                        if (content != null)
                         {
-                            optionCopy.OnSelected(windowComponent.Process);
+                            IncidentAction action = new IncidentAction(actionId);
+                            content.OnActionSelected(action);
                         }
                     });
                 }
@@ -209,37 +214,22 @@ namespace MonsterBattleGame
         /// <summary>
         /// コンテンツからインシデントウィンドウを作成
         /// </summary>
-        /// <param name="content">インシデントコンテンツ</param>
+        /// <param name="content">IncidentOptionalContent</param>
         /// <returns>IncidentWindowコンポーネント付きGameObject</returns>
-        public static GameObject CreateWindowFromContent(IncidentContent content)
+        public static GameObject CreateWindowFromContent(IncidentOptionalContent content)
         {
             if (content == null)
             {
-                Debug.LogError("[IncidentWindowBuilder] content is null");
+                Debug.LogError("[IncidentOptionalContentWindowBuilder] content is null");
                 return null;
-            }
-
-            // IncidentWindowOptionに変換
-            IncidentWindowOption[] options = null;
-            if (content is IncidentOptionalContent optionalContent && optionalContent.HasOptions())
-            {
-                options = new IncidentWindowOption[optionalContent.Options.Length];
-                for (int i = 0; i < optionalContent.Options.Length; i++)
-                {
-                    var contentOption = optionalContent.Options[i];
-                    options[i] = new IncidentWindowOption(contentOption.Label, (process) =>
-                    {
-                        // コンテンツオプションのコールバックを呼び出す
-                        contentOption.OnSelected?.Invoke(process, contentOption.NextStateId);
-                    });
-                }
             }
 
             return CreateWindow(
                 content.Title ?? "インシデント",
                 content.ImagePath,
                 content.MessageText ?? "",
-                options
+                content.Options,
+                content
             );
         }
 
@@ -257,4 +247,3 @@ namespace MonsterBattleGame
         }
     }
 }
-

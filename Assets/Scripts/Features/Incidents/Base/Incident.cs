@@ -86,8 +86,8 @@ namespace MonsterBattleGame
         /// インシデントが解決されたときに呼ばれる
         /// 派生クラスでオーバーライドしてカスタム処理を実装
         /// </summary>
-        /// <param name="process">解決されたIncidentProcess</param>
-        public virtual void OnResolve(IncidentProcess process)
+        /// <param name="state">解決されたIncidentState</param>
+        public virtual void OnResolve(IncidentState state)
         {
             // デフォルトは空実装
         }

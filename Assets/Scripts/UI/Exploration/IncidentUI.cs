@@ -16,7 +16,7 @@ namespace MonsterBattleGame
         [SerializeField] private GameObject iconPrefab;
 
         private IncidentManager incidentManager;
-        private Dictionary<IncidentProcess, IncidentIcon> iconMap = new Dictionary<IncidentProcess, IncidentIcon>();
+        private Dictionary<IncidentState, IncidentIcon> iconMap = new Dictionary<IncidentState, IncidentIcon>();
         private GameObject currentWindowInstance;
 
         private void Awake()
@@ -49,7 +49,7 @@ namespace MonsterBattleGame
         /// <summary>
         /// インシデントが発生したときの処理
         /// </summary>
-        private void OnIncidentOccurred(IncidentProcess process)
+        private void OnIncidentOccurred(IncidentState state)
         {
             UpdateIcons();
         }
@@ -57,7 +57,7 @@ namespace MonsterBattleGame
         /// <summary>
         /// インシデントが解決されたときの処理
         /// </summary>
-        private void OnIncidentResolved(IncidentProcess process)
+        private void OnIncidentResolved(IncidentState state)
         {
             UpdateIcons();
         }
@@ -65,7 +65,7 @@ namespace MonsterBattleGame
         /// <summary>
         /// インシデントが放置されたときの処理
         /// </summary>
-        private void OnIncidentDismissed(IncidentProcess process)
+        private void OnIncidentDismissed(IncidentState state)
         {
             // アイコンは残すので何もしない
         }
@@ -73,7 +73,7 @@ namespace MonsterBattleGame
         /// <summary>
         /// インシデントが期限切れになったときの処理
         /// </summary>
-        private void OnIncidentExpired(IncidentProcess process)
+        private void OnIncidentExpired(IncidentState state)
         {
             UpdateIcons();
         }
@@ -92,11 +92,11 @@ namespace MonsterBattleGame
                 throw new System.NullReferenceException("iconContainer is null. It must be assigned in the inspector.");
             }
 
-            var activeIncidents = incidentManager.ActiveIncidents;
-            var currentProcessIds = new HashSet<string>(activeIncidents.Select(process => process.Incident.Id));
+            var activeStates = incidentManager.ActiveStates;
+            var currentStateIds = new HashSet<string>(activeStates.Select(state => state.GetStateId()));
 
             // 削除されたインシデントのアイコンを削除
-            var toRemove = iconMap.Where(kvp => !currentProcessIds.Contains(kvp.Key.Incident.Id)).ToList();
+            var toRemove = iconMap.Where(kvp => !currentStateIds.Contains(kvp.Key.GetStateId())).ToList();
             foreach (var kvp in toRemove)
             {
                 if (kvp.Value != null)
@@ -107,16 +107,16 @@ namespace MonsterBattleGame
             }
 
             // 新しいインシデントのアイコンを追加または更新
-            foreach (var process in activeIncidents)
+            foreach (var state in activeStates)
             {
-                if (!iconMap.ContainsKey(process))
+                if (!iconMap.ContainsKey(state))
                 {
-                    CreateIcon(process);
+                    CreateIcon(state);
                 }
                 else
                 {
                     // 既存のアイコンの見た目を更新（Urgencyが変更された可能性があるため）
-                    iconMap[process].UpdateAppearance();
+                    iconMap[state].UpdateAppearance();
                 }
             }
         }
@@ -124,7 +124,7 @@ namespace MonsterBattleGame
         /// <summary>
         /// アイコンを作成
         /// </summary>
-        private void CreateIcon(IncidentProcess process)
+        private void CreateIcon(IncidentState state)
         {
             if (iconContainer == null)
             {
@@ -146,7 +146,8 @@ namespace MonsterBattleGame
                 rectTransform.sizeDelta = new Vector2(50, 50);
 
                 Image image = iconObj.AddComponent<Image>();
-                image.color = process.Incident != null ? process.Incident.IconColor : Color.white;
+                Incident incident = incidentManager.GetIncidentForState(state);
+                image.color = incident != null ? incident.IconColor : Color.white;
 
                 Button button = iconObj.AddComponent<Button>();
             }
@@ -157,30 +158,39 @@ namespace MonsterBattleGame
                 icon = iconObj.AddComponent<IncidentIcon>();
             }
 
-            icon.SetIncidentProcess(process);
+            icon.SetIncidentState(state);
             icon.OnIconClicked += OpenWindow;
 
-            iconMap[process] = icon;
+            iconMap[state] = icon;
+            
+            // IncidentManagerにアイコンを登録
+            if (incidentManager != null)
+            {
+                incidentManager.SetIconForState(state, icon);
+            }
         }
 
         /// <summary>
         /// インシデントウィンドウを開く
         /// </summary>
-        public void OpenWindow(IncidentProcess process)
+        public void OpenWindow(IncidentState state)
         {
-            if (process == null)
+            if (state == null)
             {
-                throw new System.ArgumentNullException(nameof(process), "process cannot be null.");
+                throw new System.ArgumentNullException(nameof(state), "state cannot be null.");
             }
-            if (process.Incident == null)
+
+            var incidentManager = IncidentManager.Instance;
+            if (incidentManager == null)
             {
-                throw new System.NullReferenceException("process.Incident is null. IncidentProcess must have a valid Incident.");
+                throw new System.NullReferenceException("IncidentManager.Instance is null.");
             }
 
             // 既にウィンドウが存在する場合
-            if (process.WindowPrefabInstance != null)
+            GameObject existingWindowObj = incidentManager.GetWindowForState(state);
+            if (existingWindowObj != null)
             {
-                IncidentWindow existingWindow = process.WindowPrefabInstance.GetComponent<IncidentWindow>();
+                IncidentWindow existingWindow = existingWindowObj.GetComponent<IncidentWindow>();
                 if (existingWindow != null)
                 {
                     // ウィンドウが非表示の場合は表示する
@@ -213,79 +223,44 @@ namespace MonsterBattleGame
                 throw new System.Exception("MenuCanvas not found. Please create MenuCanvas first.");
             }
 
-            // ExplorationIncidentの場合はcontentベースで作成
-            if (process.Incident is ExplorationIncident explorationIncident)
+            // コンテンツを作成
+            IncidentContent content = state.CreateContent();
+            if (content == null)
             {
-                // 初期状態が設定されていない場合は設定
-                if (process.CurrentState == null)
-                {
-                    IncidentState initialState = explorationIncident.GetInitialState(process);
-                    if (initialState != null)
-                    {
-                        process.ApplyAction(new IncidentAction("initial"));
-                        // 状態を直接設定（ApplyActionは既に呼ばれているが、念のため）
-                        // 実際には、ApplyActionで状態が設定されるので、ここでは確認のみ
-                    }
-                }
-
-                // コンテンツを作成
-                IncidentContent content = explorationIncident.CreateContentFromState(process);
-                if (content == null)
-                {
-                    Debug.LogWarning($"[IncidentUI] Failed to create content for incident: {process.Incident.Id}");
-                    return;
-                }
-
-                // ウィンドウを作成
-                GameObject windowObj = new GameObject("IncidentWindow");
-                windowObj.transform.SetParent(canvas.transform, false);
-                RectTransform windowRect = windowObj.AddComponent<RectTransform>();
-                windowRect.sizeDelta = new Vector2(400, 300);
-                windowRect.anchoredPosition = Vector2.zero;
-
-                IncidentWindow windowComponent = windowObj.AddComponent<IncidentWindow>();
-                
-                // 背景パネルを作成
-                GameObject panelObj = new GameObject("Panel");
-                panelObj.transform.SetParent(windowObj.transform, false);
-                RectTransform panelRect = panelObj.AddComponent<RectTransform>();
-                panelRect.anchorMin = Vector2.zero;
-                panelRect.anchorMax = Vector2.one;
-                panelRect.sizeDelta = Vector2.zero;
-                panelRect.anchoredPosition = Vector2.zero;
-
-                Image panelImage = panelObj.AddComponent<Image>();
-                panelImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
-
-                // コンテンツエリアを設定
-                windowComponent.SetContentArea(panelObj.transform);
-                windowComponent.SetContent(content);
-                windowComponent.SetProcess(process);
-
-                currentWindowInstance = windowObj;
-                process.WindowPrefabInstance = windowObj;
+                Debug.LogWarning($"[IncidentUI] Failed to create content for state: {state.GetStateId()}");
+                return;
             }
-            else
-            {
-                // 既存の方法（Prefabベース）を使用
-                GameObject windowPrefab = process.Incident.GetWindowPrefab();
-                if (windowPrefab == null)
-                {
-                    throw new System.NullReferenceException($"Window prefab not found for incident: {process.Incident.Id}. Make sure GetWindowPrefab() returns a valid prefab.");
-                }
 
-                // ウィンドウをインスタンス化
-                currentWindowInstance = Instantiate(windowPrefab, canvas.transform);
+            content.State = state;
 
-                // IncidentWindowコンポーネントを取得
-                IncidentWindow windowComponent = currentWindowInstance.GetComponent<IncidentWindow>();
-                if (windowComponent != null)
-                {
-                    windowComponent.SetProcess(process);
-                }
+            // ウィンドウを作成
+            GameObject windowObj = new GameObject("IncidentWindow");
+            windowObj.transform.SetParent(canvas.transform, false);
+            RectTransform windowRect = windowObj.AddComponent<RectTransform>();
+            windowRect.sizeDelta = new Vector2(400, 300);
+            windowRect.anchoredPosition = Vector2.zero;
 
-                process.WindowPrefabInstance = currentWindowInstance;
-            }
+            IncidentWindow windowComponent = windowObj.AddComponent<IncidentWindow>();
+            
+            // 背景パネルを作成
+            GameObject panelObj = new GameObject("Panel");
+            panelObj.transform.SetParent(windowObj.transform, false);
+            RectTransform panelRect = panelObj.AddComponent<RectTransform>();
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.sizeDelta = Vector2.zero;
+            panelRect.anchoredPosition = Vector2.zero;
+
+            Image panelImage = panelObj.AddComponent<Image>();
+            panelImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
+
+            // コンテンツエリアを設定
+            windowComponent.SetContentArea(panelObj.transform);
+            windowComponent.SetContent(content);
+            windowComponent.SetState(state);
+
+            currentWindowInstance = windowObj;
+            incidentManager.SetWindowForState(state, windowObj);
         }
 
         /// <summary>

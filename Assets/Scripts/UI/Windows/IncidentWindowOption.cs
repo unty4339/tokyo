@@ -13,19 +13,12 @@ namespace MonsterBattleGame
         public string Label { get; set; }
 
         /// <summary>
-        /// 選択時のコールバック（IncidentProcessを引数に取る）
-        /// </summary>
-        public Action<IncidentProcess> OnSelected { get; set; }
-
-        /// <summary>
         /// コンストラクタ
         /// </summary>
         /// <param name="label">選択肢の表示名</param>
-        /// <param name="onSelected">選択時のコールバック</param>
-        public IncidentWindowOption(string label, Action<IncidentProcess> onSelected)
+        public IncidentWindowOption(string label)
         {
             Label = label;
-            OnSelected = onSelected;
         }
     }
 }

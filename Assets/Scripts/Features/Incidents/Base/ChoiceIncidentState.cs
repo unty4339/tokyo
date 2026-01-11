@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace MonsterBattleGame
 {
     /// <summary>
@@ -21,19 +23,26 @@ namespace MonsterBattleGame
         public IncidentContentOption[] Options { get; set; }
 
         /// <summary>
+        /// 状態遷移マップ（アクションID -> 次の状態を作成する関数）
+        /// </summary>
+        public System.Func<string, IncidentState> TransitionMap { get; set; }
+
+        /// <summary>
         /// コンストラクタ
         /// </summary>
         /// <param name="stateId">状態ID</param>
         /// <param name="text">表示するテキスト</param>
         /// <param name="options">選択肢の配列</param>
         /// <param name="urgency">緊急度（デフォルトはImmediate）</param>
-        public ChoiceIncidentState(string stateId, string text, IncidentContentOption[] options = null, IncidentUrgency urgency = IncidentUrgency.Immediate)
+        /// <param name="timeLimitWeeks">期限（週数）。nullの場合は期限なし</param>
+        public ChoiceIncidentState(string stateId, string text, IncidentContentOption[] options = null, IncidentUrgency urgency = IncidentUrgency.Immediate, int? timeLimitWeeks = null)
         {
             this.stateId = stateId;
             StateName = stateId;
             Text = text;
             Options = options;
             Urgency = urgency;
+            TimeLimitWeeks = timeLimitWeeks;
         }
 
         /// <summary>
@@ -43,6 +52,43 @@ namespace MonsterBattleGame
         public override string GetStateId()
         {
             return stateId;
+        }
+
+        /// <summary>
+        /// IncidentContentを作成
+        /// </summary>
+        /// <returns>作成されたコンテンツ</returns>
+        public override IncidentContent CreateContent()
+        {
+            return new IncidentOptionalContent
+            {
+                Title = StateName,
+                MessageText = Text,
+                Options = Options
+            };
+        }
+
+        /// <summary>
+        /// 状態遷移
+        /// </summary>
+        /// <param name="action">アクション。nullの場合は時間切れを意味する</param>
+        /// <returns>次の状態。nullの場合はインシデント終了</returns>
+        public override IncidentState Translate(IncidentAction action)
+        {
+            // 時間切れの場合
+            if (action == null)
+            {
+                return null; // 終了
+            }
+
+            // 遷移マップが設定されている場合はそれを使用
+            if (TransitionMap != null)
+            {
+                return TransitionMap(action.ActionId);
+            }
+
+            // デフォルトでは終了しない（継続）
+            return null;
         }
     }
 }

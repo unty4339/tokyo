@@ -43,7 +43,7 @@ namespace MonsterBattleGame
         /// <summary>
         /// 初期状態を取得
         /// </summary>
-        public override IncidentState GetInitialState(IncidentProcess process)
+        public override IncidentState GetInitialState()
         {
             string message = "探索中に何かを見つけた！";
             if (AreaAccessor != null)
@@ -62,76 +62,10 @@ namespace MonsterBattleGame
                 new IncidentContentOption("逃げる", "flee_choice")
             };
 
-            return new ChoiceIncidentState("initial", message, options, IncidentUrgency.Immediate);
-        }
-
-        /// <summary>
-        /// 現在の状態からコンテンツを作成
-        /// </summary>
-        public override IncidentContent CreateContentFromState(IncidentProcess process)
-        {
-            if (process == null || process.CurrentState == null)
-            {
-                return null;
-            }
-
-            var state = process.CurrentState;
-
-            // 戦闘状態の場合は特別処理
-            if (state is BattleIncidentState battleState)
-            {
-                var content = IncidentContentFactory.CreateBattleContent(battleState);
-                if (content != null)
-                {
-                    content.Process = process;
-                }
-                return content;
-            }
-
-            // テキスト状態
-            if (state is TextIncidentState textState)
-            {
-                return new IncidentOptionalContent
-                {
-                    Title = "探索イベント",
-                    MessageText = textState.Text,
-                    Process = process,
-                    Options = new IncidentContentOption[]
-                    {
-                        new IncidentContentOption("閉じる", "end")
-                    }
-                };
-            }
-
-            // 選択肢状態
-            if (state is ChoiceIncidentState choiceState)
-            {
-                return new IncidentOptionalContent
-                {
-                    Title = "探索イベント",
-                    MessageText = choiceState.Text,
-                    Process = process,
-                    Options = choiceState.Options
-                };
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// コンテンツの操作から次の状態を計算
-        /// </summary>
-        public override IncidentState CalculateNextState(IncidentProcess process, string actionId)
-        {
-            if (process == null || process.CurrentState == null)
-            {
-                return null;
-            }
-
-            string currentStateId = process.CurrentState.GetStateId();
-
-            // 初期状態からの遷移
-            if (currentStateId == "initial")
+            var initialState = new ChoiceIncidentState("initial", message, options, IncidentUrgency.Immediate, TimeLimitWeeks);
+            
+            // 状態遷移マップを設定
+            initialState.TransitionMap = (actionId) =>
             {
                 if (actionId == "battle_choice")
                 {
@@ -141,36 +75,17 @@ namespace MonsterBattleGame
                 else if (actionId == "flee_choice")
                 {
                     // 逃げるを選択した場合
-                    return new TextIncidentState("fled", "無事に逃げ切った。", IncidentUrgency.Deferrable);
-                }
-            }
-
-            // 戦闘状態からの遷移
-            if (currentStateId == "battle" && process.CurrentState is BattleIncidentState battleState)
-            {
-                if (battleState.IsBattleFinished && battleState.Result != null)
-                {
-                    // 戦闘結果に応じた状態を返す
-                    if (battleState.Result.Result == BattleState.PlayerWon)
+                    return new TextIncidentState("fled", "無事に逃げ切った。", IncidentUrgency.Deferrable, TimeLimitWeeks)
                     {
-                        return new TextIncidentState("battle_won", "戦闘に勝利した！", IncidentUrgency.Deferrable);
-                    }
-                    else
-                    {
-                        return new TextIncidentState("battle_lost", "戦闘に敗北した...", IncidentUrgency.Deferrable);
-                    }
+                        NextStateId = "end"
+                    };
                 }
-            }
-
-            // 終了状態
-            if (actionId == "end")
-            {
-                // nullを返すとインシデントが終了する
                 return null;
-            }
+            };
 
-            return null;
+            return initialState;
         }
+
 
         /// <summary>
         /// 戦闘状態を作成
@@ -199,12 +114,37 @@ namespace MonsterBattleGame
             // 敵チームを作成
             Team enemyTeam = DummyDataFactory.CreateEnemyTeam(10);
 
-            return new BattleIncidentState(playerTeam, enemyTeam, "battle");
+            var battleState = new BattleIncidentState(playerTeam, enemyTeam, "battle", TimeLimitWeeks);
+            
+            // 戦闘終了時の遷移を設定
+            battleState.OnBattleEndTransition = (result) =>
+            {
+                if (result != null)
+                {
+                    if (result.Result == BattleState.PlayerWon)
+                    {
+                        return new TextIncidentState("battle_won", "戦闘に勝利した！", IncidentUrgency.Deferrable, TimeLimitWeeks)
+                        {
+                            NextStateId = "end"
+                        };
+                    }
+                    else
+                    {
+                        return new TextIncidentState("battle_lost", "戦闘に敗北した...", IncidentUrgency.Deferrable, TimeLimitWeeks)
+                        {
+                            NextStateId = "end"
+                        };
+                    }
+                }
+                return null;
+            };
+
+            return battleState;
         }
 
-        public override void OnResolve(IncidentProcess process)
+        public override void OnResolve(IncidentState state)
         {
-            base.OnResolve(process);
+            base.OnResolve(state);
 
             // 探索エリアの部員を操作する例
             if (AreaAccessor != null)
