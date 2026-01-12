@@ -20,7 +20,6 @@ namespace MonsterBattleGame
         /// <returns>IncidentWindowコンポーネント付きGameObject</returns>
         private static GameObject CreateWindow(string title, string imagePath, string messageText, IncidentContentOption[] options, IncidentContent content)
         {
-            Debug.Log($"CreateWindow: {title}, {imagePath}, {messageText}, {options?.Length ?? 0}");
             // ルートオブジェクトを作成
             GameObject windowRoot = new GameObject("IncidentWindow");
             RectTransform rootRect = windowRoot.AddComponent<RectTransform>();

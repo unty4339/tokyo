@@ -138,19 +138,6 @@ namespace MonsterBattleGame
                 // クールタイムを進める
                 attacker.ReduceCooldowns();
 
-                // 特性の効果を適用（複数の特性に対応）
-                if (attacker.Traits != null)
-                {
-                    var context = new BattleContext(this, CurrentTurn, attacker);
-                    foreach (var trait in attacker.Traits)
-                    {
-                        if (trait != null && trait.CheckConditions(attacker, context))
-                        {
-                            trait.ApplyEffects(attacker, context);
-                        }
-                    }
-                }
-
                 // 攻撃対象を決定
                 Monster target = SelectTarget(attacker);
                 if (target != null)
@@ -227,14 +214,9 @@ namespace MonsterBattleGame
             int damage = CalculateDamage(attacker, target, skill);
             target.TakeDamage(damage);
 
-            // クールタイムを設定
-            if (skill.Cooldown > 0)
-            {
-                attacker.SkillCooldowns[skill] = skill.Cooldown;
-            }
-
             // 全体攻撃の場合は敵チーム全員にダメージ
-            if (skill.Range == AttackRange.All)
+            var activeSkill = skill as ActiveSkill;
+            if (activeSkill != null && activeSkill.Move is AttackMove attackMove && attackMove.TargetCount > 1)
             {
                 bool isPlayerMonster = PlayerTeam != null && PlayerTeam.Monsters.Contains(attacker);
                 Team enemyTeam = isPlayerMonster ? EnemyTeam : PlayerTeam;
@@ -260,7 +242,13 @@ namespace MonsterBattleGame
         {
             // 簡易的なダメージ計算式
             // 実際のゲームではより複雑な計算式を使用することもあります
-            int baseDamage = attacker.CalculatedAttack + skill.Power - target.CalculatedDefense;
+            var activeSkill = skill as ActiveSkill;
+            int power = 0;
+            if (activeSkill?.Move is AttackMove attackMove)
+            {
+                power = attackMove.Power;
+            }
+            int baseDamage = attacker.CalculatedAttack + power - target.CalculatedDefense;
             return System.Math.Max(1, baseDamage); // 最低1ダメージ
         }
 

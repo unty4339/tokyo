@@ -3,39 +3,37 @@ using System.Linq;
 namespace MonsterBattleGame
 {
     /// <summary>
-    /// 技
+    /// 技の抽象クラス
     /// </summary>
-    public class Skill
+    public abstract class Skill
     {
+        /// <summary>レベルを示すint</summary>
+        public int Level { get; set; }
+
         /// <summary>名称</summary>
         public string Name { get; set; }
 
-        /// <summary>攻撃力</summary>
-        public int Power { get; set; }
-
-        /// <summary>攻撃範囲</summary>
-        public AttackRange Range { get; set; }
-
-        /// <summary>クールタイム</summary>
-        public int Cooldown { get; set; }
-
         public Skill()
         {
+            Level = 1;
             Name = string.Empty;
         }
 
-        public Skill(string name, int power, AttackRange range, int cooldown)
+        public Skill(int level, string name)
         {
+            Level = level;
             Name = name;
-            Power = power;
-            Range = range;
-            Cooldown = cooldown;
         }
+
+        /// <summary>
+        /// 説明文を返すメソッド
+        /// </summary>
+        public abstract string GetDescription();
 
         /// <summary>
         /// 技を使用できるかチェック
         /// </summary>
-        public bool CanUse(Monster monster)
+        public virtual bool CanUse(Monster monster)
         {
             if (monster == null)
             {

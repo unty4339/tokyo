@@ -10,7 +10,7 @@ namespace MonsterBattleGame
     public class ClubMember
     {
         /// <summary>種別への参照（種族値）</summary>
-        public ClubMemberSpecies Species { get; set; }
+        public Species Species { get; set; }
 
         /// <summary>苗字</summary>
         public string LastName { get; set; }
@@ -34,8 +34,8 @@ namespace MonsterBattleGame
         /// <summary>学年</summary>
         public Grade Grade { get; set; }
 
-        /// <summary>レベル</summary>
-        public int Level { get; set; }
+        /// <summary>レベルインスタンス</summary>
+        public Level Level { get; set; }
 
         /// <summary>個体値</summary>
         public IndividualValue IV { get; set; }
@@ -50,9 +50,15 @@ namespace MonsterBattleGame
         public Personality Personality { get; set; }
 
         /// <summary>経歴</summary>
-        public History History { get; set; }
+        public Career Career { get; set; }
 
-        /// <summary>覚えている技のリスト</summary>
+        /// <summary>最終的な末路（在籍中はnull）</summary>
+        public Fate? Fate { get; set; }
+
+        /// <summary>ステータス</summary>
+        public Status Status { get; set; }
+
+        /// <summary>覚えている技のリスト（最大2つ）</summary>
         public List<Skill> Skills { get; set; }
 
         /// <summary>計算された最大HP</summary>
@@ -69,46 +75,39 @@ namespace MonsterBattleGame
 
         public ClubMember()
         {
-            Level = 1;
+            Level = new Level(1, 0);
             LastName = string.Empty;
             FirstName = string.Empty;
             IV = new IndividualValue();
             EV = new EffortValue();
-            Personality = new Personality();
+            Personality = Personality.Normal;
             Traits = new List<Trait>();
+            Career = new Career();
+            Fate = null;
+            Status = new Status();
             Skills = new List<Skill>();
         }
 
-        public ClubMember(ClubMemberSpecies species, Grade grade, int level, IndividualValue iv, EffortValue ev, Personality personality, List<Trait> traits, History history, List<Skill> skills, string lastName = "", string firstName = "")
+        public ClubMember(Species species, Grade grade, Level level, IndividualValue iv, EffortValue ev, Personality personality, List<Trait> traits, Career career, List<Skill> skills, string lastName = "", string firstName = "")
         {
+            if (species == null)
+            {
+                throw new System.ArgumentNullException(nameof(species), "Speciesは必須です");
+            }
             Species = species;
             Grade = grade;
-            Level = level;
+            Level = level ?? new Level(1, 0);
             LastName = lastName ?? string.Empty;
             FirstName = firstName ?? string.Empty;
             IV = iv ?? new IndividualValue();
             EV = ev ?? new EffortValue();
-            Personality = personality ?? new Personality();
+            Personality = personality;
             Traits = traits ?? new List<Trait>();
-            History = history;
-            Skills = skills ?? new List<Skill>();
+            Career = career ?? new Career();
+            Fate = null;
+            Skills = skills != null ? (skills.Count > 2 ? skills.GetRange(0, 2) : skills) : new List<Skill>();
             CalculateStats();
-        }
-
-        // 後方互換性のためのコンストラクタ（既存コードとの互換性）
-        public ClubMember(Grade grade, int level, IndividualValue iv, List<Trait> traits, Personality personality, History history, List<Skill> skills, string lastName = "", string firstName = "")
-        {
-            Grade = grade;
-            Level = level;
-            LastName = lastName ?? string.Empty;
-            FirstName = firstName ?? string.Empty;
-            IV = iv ?? new IndividualValue();
-            EV = new EffortValue();
-            Personality = personality ?? new Personality();
-            Traits = traits ?? new List<Trait>();
-            History = history;
-            Skills = skills ?? new List<Skill>();
-            CalculateStats();
+            UpdateStatus();
         }
 
         /// <summary>
@@ -121,19 +120,6 @@ namespace MonsterBattleGame
         {
             if (Species == null)
             {
-                // Speciesが設定されていない場合は、デフォルト値を使用（後方互換性のため）
-                int baseHP = 100;
-                int baseAttack = 50;
-                int baseDefense = 50;
-                int baseSpeed = 50;
-
-                // 学年による補正（学年が上がるほどステータスが上がる）
-                int gradeBonus = (int)Grade * 10;
-
-                CalculatedHP = baseHP + (Level * 10) + (IV?.HP ?? 0) * 2 + gradeBonus;
-                CalculatedAttack = baseAttack + (Level * 2) + (IV?.Attack ?? 0) * 1 + gradeBonus;
-                CalculatedDefense = baseDefense + (Level * 2) + (IV?.Defense ?? 0) * 1 + gradeBonus;
-                CalculatedSpeed = baseSpeed + (Level * 1) + (IV?.Speed ?? 0) * 1 + gradeBonus;
                 return;
             }
 
@@ -150,26 +136,50 @@ namespace MonsterBattleGame
             // HP計算式: ⌊((Base × 2 + IV + ⌊EV/4⌋) × Lv) / 100⌋ + Lv + 10
             int evHpDiv4 = (int)System.Math.Floor(EV.HP / 4.0);
             int hpInner = (Species.BaseHP * 2) + IV.HP + evHpDiv4;
-            int hpCalc = (int)System.Math.Floor((hpInner * Level) / 100.0);
-            CalculatedHP = hpCalc + Level + 10;
+            int hpCalc = (int)System.Math.Floor((hpInner * Level.CurrentLevel) / 100.0);
+            CalculatedHP = hpCalc + Level.CurrentLevel + 10;
 
             // 攻撃計算式: ⌊((Base × 2 + IV + ⌊EV/4⌋) × Lv) / 100⌋ + 5
             int evAttackDiv4 = (int)System.Math.Floor(EV.Attack / 4.0);
             int attackInner = (Species.BaseAttack * 2) + IV.Attack + evAttackDiv4;
-            int attackCalc = (int)System.Math.Floor((attackInner * Level) / 100.0);
+            int attackCalc = (int)System.Math.Floor((attackInner * Level.CurrentLevel) / 100.0);
             CalculatedAttack = attackCalc + 5;
 
             // 防御計算式: ⌊((Base × 2 + IV + ⌊EV/4⌋) × Lv) / 100⌋ + 5
             int evDefenseDiv4 = (int)System.Math.Floor(EV.Defense / 4.0);
             int defenseInner = (Species.BaseDefense * 2) + IV.Defense + evDefenseDiv4;
-            int defenseCalc = (int)System.Math.Floor((defenseInner * Level) / 100.0);
+            int defenseCalc = (int)System.Math.Floor((defenseInner * Level.CurrentLevel) / 100.0);
             CalculatedDefense = defenseCalc + 5;
 
             // 素早さ計算式: ⌊((Base × 2 + IV + ⌊EV/4⌋) × Lv) / 100⌋ + 5
             int evSpeedDiv4 = (int)System.Math.Floor(EV.Speed / 4.0);
             int speedInner = (Species.BaseSpeed * 2) + IV.Speed + evSpeedDiv4;
-            int speedCalc = (int)System.Math.Floor((speedInner * Level) / 100.0);
+            int speedCalc = (int)System.Math.Floor((speedInner * Level.CurrentLevel) / 100.0);
             CalculatedSpeed = speedCalc + 5;
+        }
+
+        /// <summary>
+        /// Statusを更新
+        /// </summary>
+        public void UpdateStatus()
+        {
+            if (Species != null && Level != null)
+            {
+                Status = Status.CalculateFromLevelAndSpecies(Level, Species, IV, EV);
+            }
+        }
+
+        /// <summary>
+        /// あるTraitを持っているかboolで返すメソッド
+        /// </summary>
+        public bool HasTrait(Trait trait)
+        {
+            if (trait == null || Traits == null)
+            {
+                return false;
+            }
+
+            return Traits.Contains(trait);
         }
 
         /// <summary>
@@ -179,28 +189,13 @@ namespace MonsterBattleGame
         /// </summary>
         public Monster ToMonster()
         {
-            // 部員の種族値からMonsterSpeciesを作成
-            MonsterSpecies species;
-            if (Species != null)
+            if (Species == null)
             {
-                species = new MonsterSpecies(Species.Name, Species.BaseHP, Species.BaseAttack, Species.BaseDefense, Species.BaseSpeed);
+                throw new System.InvalidOperationException("Speciesが設定されていません");
             }
-            else
-            {
-                // Speciesが設定されていない場合は、計算済みステータスから逆算（後方互換性のため）
-                int baseHP = CalculatedHP - (Level * 10) - ((IV?.HP ?? 0) * 2);
-                int baseAttack = CalculatedAttack - (Level * 2) - ((IV?.Attack ?? 0) * 1);
-                int baseDefense = CalculatedDefense - (Level * 2) - ((IV?.Defense ?? 0) * 1);
-                int baseSpeed = CalculatedSpeed - (Level * 1) - ((IV?.Speed ?? 0) * 1);
 
-                // 負の値にならないように調整
-                baseHP = System.Math.Max(1, baseHP);
-                baseAttack = System.Math.Max(1, baseAttack);
-                baseDefense = System.Math.Max(1, baseDefense);
-                baseSpeed = System.Math.Max(1, baseSpeed);
-
-                species = new MonsterSpecies("部員", baseHP, baseAttack, baseDefense, baseSpeed);
-            }
+            // 部員の種族値からSpeciesを作成
+            Species species = new Species(Species.Name, Species.BaseHP, Species.BaseAttack, Species.BaseDefense, Species.BaseSpeed);
 
             // 部員の全ての特性をMonsterに反映
             List<Trait> monsterTraits = new List<Trait>(Traits);

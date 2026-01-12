@@ -252,24 +252,6 @@ namespace MonsterBattleGame
                 // クールタイムを進める
                 attacker.ReduceCooldowns();
 
-                // 特性の効果を適用（複数の特性に対応）
-                if (attacker.Traits != null)
-                {
-                    var context = new BattleContext(currentBattle, currentBattle.CurrentTurn, attacker);
-                    foreach (var trait in attacker.Traits)
-                    {
-                        if (trait != null && trait.CheckConditions(attacker, context))
-                        {
-                            trait.ApplyEffects(attacker, context);
-                            AddLog($"{attacker.Species.Name}の特性「{trait.Name}」が発動！");
-                            if (!isSkipping)
-                            {
-                                yield return StartCoroutine(WaitForSecondsOrSkip(0.3f));
-                            }
-                        }
-                    }
-                }
-
                 // 攻撃対象を決定
                 Monster target = SelectTarget(attacker);
                 if (target == null)

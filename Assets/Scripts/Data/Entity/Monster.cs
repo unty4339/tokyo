@@ -8,10 +8,10 @@ namespace MonsterBattleGame
     public class Monster
     {
         /// <summary>種別への参照</summary>
-        public MonsterSpecies Species { get; set; }
+        public Species Species { get; set; }
 
-        /// <summary>レベル</summary>
-        public int Level { get; set; }
+        /// <summary>レベルインスタンス</summary>
+        public Level Level { get; set; }
 
         /// <summary>個体値</summary>
         public IndividualValue IV { get; set; }
@@ -24,6 +24,12 @@ namespace MonsterBattleGame
 
         /// <summary>特性のリスト</summary>
         public List<Trait> Traits { get; set; }
+
+        /// <summary>ステータス</summary>
+        public Status Status { get; set; }
+
+        /// <summary>Buffのリスト</summary>
+        public List<Buff> Buffs { get; set; }
 
         /// <summary>特性（互換性のため、Traitsの最初の要素を返す）</summary>
         public Trait Trait
@@ -83,23 +89,27 @@ namespace MonsterBattleGame
 
         public Monster()
         {
-            Level = 1;
+            Level = new Level(1, 0);
             IV = new IndividualValue();
             EV = new EffortValue();
-            Personality = new Personality();
+            Personality = Personality.Normal;
             Traits = new List<Trait>();
+            Status = new Status();
+            Buffs = new List<Buff>();
             Skills = new List<Skill>();
             SkillCooldowns = new Dictionary<Skill, int>();
         }
 
-        public Monster(MonsterSpecies species, int level, IndividualValue iv, Trait trait, List<Skill> skills)
+        public Monster(Species species, int level, IndividualValue iv, Trait trait, List<Skill> skills)
         {
             Species = species;
-            Level = level;
+            Level = new Level(level, 0);
             IV = iv ?? new IndividualValue();
             EV = new EffortValue();
-            Personality = new Personality();
+            Personality = Personality.Normal;
             Traits = new List<Trait>();
+            Status = new Status();
+            Buffs = new List<Buff>();
             if (trait != null)
             {
                 Traits.Add(trait);
@@ -107,34 +117,59 @@ namespace MonsterBattleGame
             Skills = skills ?? new List<Skill>();
             SkillCooldowns = new Dictionary<Skill, int>();
             CalculateStats();
+            UpdateStatus();
             CurrentHP = CalculatedHP;
         }
 
-        public Monster(MonsterSpecies species, int level, IndividualValue iv, List<Trait> traits, List<Skill> skills)
+        public Monster(Species species, int level, IndividualValue iv, List<Trait> traits, List<Skill> skills)
         {
             Species = species;
-            Level = level;
+            Level = new Level(level, 0);
             IV = iv ?? new IndividualValue();
             EV = new EffortValue();
-            Personality = new Personality();
+            Personality = Personality.Normal;
             Traits = traits ?? new List<Trait>();
+            Status = new Status();
+            Buffs = new List<Buff>();
             Skills = skills ?? new List<Skill>();
             SkillCooldowns = new Dictionary<Skill, int>();
             CalculateStats();
+            UpdateStatus();
             CurrentHP = CalculatedHP;
         }
 
-        public Monster(MonsterSpecies species, int level, IndividualValue iv, EffortValue ev, Personality personality, List<Trait> traits, List<Skill> skills)
+        public Monster(Species species, Level level, IndividualValue iv, EffortValue ev, Personality personality, List<Trait> traits, List<Skill> skills)
         {
             Species = species;
-            Level = level;
+            Level = level ?? new Level(1, 0);
             IV = iv ?? new IndividualValue();
             EV = ev ?? new EffortValue();
-            Personality = personality ?? new Personality();
+            Personality = personality;
             Traits = traits ?? new List<Trait>();
+            Status = new Status();
+            Buffs = new List<Buff>();
             Skills = skills ?? new List<Skill>();
             SkillCooldowns = new Dictionary<Skill, int>();
             CalculateStats();
+            UpdateStatus();
+            CurrentHP = CalculatedHP;
+        }
+
+        // 後方互換性のためのコンストラクタ
+        public Monster(Species species, int level, IndividualValue iv, EffortValue ev, Personality personality, List<Trait> traits, List<Skill> skills)
+        {
+            Species = species;
+            Level = new Level(level, 0);
+            IV = iv ?? new IndividualValue();
+            EV = ev ?? new EffortValue();
+            Personality = personality;
+            Traits = traits ?? new List<Trait>();
+            Status = new Status();
+            Buffs = new List<Buff>();
+            Skills = skills ?? new List<Skill>();
+            SkillCooldowns = new Dictionary<Skill, int>();
+            CalculateStats();
+            UpdateStatus();
             CurrentHP = CalculatedHP;
         }
 
@@ -164,26 +199,41 @@ namespace MonsterBattleGame
             // HP計算式: ⌊((Base × 2 + IV + ⌊EV/4⌋) × Lv) / 100⌋ + Lv + 10
             int evHpDiv4 = (int)System.Math.Floor(EV.HP / 4.0);
             int hpInner = (Species.BaseHP * 2) + IV.HP + evHpDiv4;
-            int hpCalc = (int)System.Math.Floor((hpInner * Level) / 100.0);
-            CalculatedHP = hpCalc + Level + 10;
+            int hpCalc = (int)System.Math.Floor((hpInner * Level.CurrentLevel) / 100.0);
+            CalculatedHP = hpCalc + Level.CurrentLevel + 10;
 
             // 攻撃計算式: ⌊((Base × 2 + IV + ⌊EV/4⌋) × Lv) / 100⌋ + 5
             int evAttackDiv4 = (int)System.Math.Floor(EV.Attack / 4.0);
             int attackInner = (Species.BaseAttack * 2) + IV.Attack + evAttackDiv4;
-            int attackCalc = (int)System.Math.Floor((attackInner * Level) / 100.0);
+            int attackCalc = (int)System.Math.Floor((attackInner * Level.CurrentLevel) / 100.0);
             CalculatedAttack = attackCalc + 5;
 
             // 防御計算式: ⌊((Base × 2 + IV + ⌊EV/4⌋) × Lv) / 100⌋ + 5
             int evDefenseDiv4 = (int)System.Math.Floor(EV.Defense / 4.0);
             int defenseInner = (Species.BaseDefense * 2) + IV.Defense + evDefenseDiv4;
-            int defenseCalc = (int)System.Math.Floor((defenseInner * Level) / 100.0);
+            int defenseCalc = (int)System.Math.Floor((defenseInner * Level.CurrentLevel) / 100.0);
             CalculatedDefense = defenseCalc + 5;
 
             // 素早さ計算式: ⌊((Base × 2 + IV + ⌊EV/4⌋) × Lv) / 100⌋ + 5
             int evSpeedDiv4 = (int)System.Math.Floor(EV.Speed / 4.0);
             int speedInner = (Species.BaseSpeed * 2) + IV.Speed + evSpeedDiv4;
-            int speedCalc = (int)System.Math.Floor((speedInner * Level) / 100.0);
+            int speedCalc = (int)System.Math.Floor((speedInner * Level.CurrentLevel) / 100.0);
             CalculatedSpeed = speedCalc + 5;
+        }
+
+        /// <summary>
+        /// Statusを更新
+        /// </summary>
+        public void UpdateStatus()
+        {
+            if (Species != null && Level != null)
+            {
+                Status = Status.CalculateFromLevelAndSpecies(Level, Species, IV, EV);
+            }
+            else
+            {
+                Status = new Status(CalculatedHP, CalculatedHP, 0, CalculatedAttack, CalculatedDefense, CalculatedSpeed);
+            }
         }
 
         /// <summary>
@@ -191,7 +241,8 @@ namespace MonsterBattleGame
         /// </summary>
         public void InitializeForBattle()
         {
-            CurrentHP = CalculatedHP;
+            UpdateStatus();
+            CurrentHP = Status.MaxHP;
             SkillCooldowns.Clear();
             foreach (var skill in Skills)
             {

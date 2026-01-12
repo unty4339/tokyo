@@ -131,7 +131,7 @@ namespace MonsterBattleGame
 
             // 部員のステータスに基づいて確率を調整
             // 例：部員の平均レベルが高いほど確率が上がる
-            float averageLevel = (float)assignedMembers.Average(m => m.Level);
+            float averageLevel = (float)assignedMembers.Average(m => m.Level.CurrentLevel);
             float levelBonus = (averageLevel - 10f) * 0.01f; // レベル10を基準に±1%ずつ
 
             // 部員の数に基づいて確率を調整

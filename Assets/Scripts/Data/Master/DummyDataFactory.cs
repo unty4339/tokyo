@@ -16,35 +16,35 @@ namespace MonsterBattleGame
         /// <summary>
         /// ダミーのモンスター種別を作成
         /// </summary>
-        public static MonsterSpecies CreateDummySpecies(string name, int baseHP, int baseAttack, int baseDefense, int baseSpeed)
+        public static Species CreateDummySpecies(string name, int baseHP, int baseAttack, int baseDefense, int baseSpeed)
         {
-            return new MonsterSpecies(name, baseHP, baseAttack, baseDefense, baseSpeed);
+            return new Species(name, baseHP, baseAttack, baseDefense, baseSpeed);
         }
 
         /// <summary>
-        /// デフォルトのモンスター種別リストを作成
+        /// デフォルトの種別リストを作成
         /// </summary>
-        public static List<MonsterSpecies> CreateDefaultSpecies()
+        public static List<Species> CreateDefaultSpecies()
         {
-            return new List<MonsterSpecies>
+            return new List<Species>
             {
                 // ファイター型（攻撃重視）
-                new MonsterSpecies("ファイター", 80, 120, 60, 80),
+                new Species("ファイター", 80, 120, 60, 80),
                 // タンク型（防御・HP重視）
-                new MonsterSpecies("ガーディアン", 150, 60, 120, 50),
+                new Species("ガーディアン", 150, 60, 120, 50),
                 // スピード型（素早さ重視）
-                new MonsterSpecies("スカウト", 70, 80, 50, 140),
+                new Species("スカウト", 70, 80, 50, 140),
                 // バランス型（全体的にバランス）
-                new MonsterSpecies("バランサー", 100, 90, 90, 90),
+                new Species("バランサー", 100, 90, 90, 90),
                 // 攻撃特化型（攻撃と素早さ重視）
-                new MonsterSpecies("アサシン", 65, 130, 45, 130)
+                new Species("アサシン", 65, 130, 45, 130)
             };
         }
 
         /// <summary>
-        /// デフォルトのモンスター種別を名前で取得
+        /// デフォルトの種別を名前で取得
         /// </summary>
-        public static MonsterSpecies GetDefaultSpeciesByName(string name)
+        public static Species GetDefaultSpeciesByName(string name)
         {
             var speciesList = CreateDefaultSpecies();
             return speciesList.Find(s => s.Name == name) ?? speciesList[0];
@@ -98,9 +98,10 @@ namespace MonsterBattleGame
         /// <summary>
         /// ダミーの技を作成
         /// </summary>
-        public static Skill CreateDummySkill(string name, int power, AttackRange range, int cooldown)
+        public static Skill CreateDummySkill(string name, int power, int targetCount = 1)
         {
-            return new Skill(name, power, range, cooldown);
+            var move = new AttackMove(name, power, targetCount, $"{name}による攻撃", new MovePriority("最初の敵を攻撃"), BattleAttribute.Melee);
+            return new ActiveSkill(1, name, 0, move);
         }
 
         /// <summary>
@@ -111,18 +112,18 @@ namespace MonsterBattleGame
             return new List<Skill>
             {
                 // 単体攻撃技
-                new Skill("パンチ", 30, AttackRange.Single, 0),
-                new Skill("キック", 40, AttackRange.Single, 0),
-                new Skill("ストライク", 50, AttackRange.Single, 1),
-                new Skill("ヘビーブロー", 60, AttackRange.Single, 2),
+                CreateDummySkill("パンチ", 30, 1),
+                CreateDummySkill("キック", 40, 1),
+                CreateDummySkill("ストライク", 50, 1),
+                CreateDummySkill("ヘビーブロー", 60, 1),
 
                 // 全体攻撃技
-                new Skill("エリアブラスト", 35, AttackRange.All, 2),
-                new Skill("メガブラスト", 45, AttackRange.All, 3),
+                CreateDummySkill("エリアブラスト", 35, 999),
+                CreateDummySkill("メガブラスト", 45, 999),
 
                 // 特殊技
-                new Skill("連撃", 25, AttackRange.Single, 1),
-                new Skill("必殺技", 80, AttackRange.Single, 4)
+                CreateDummySkill("連撃", 25, 1),
+                CreateDummySkill("必殺技", 80, 1)
             };
         }
 
@@ -157,18 +158,9 @@ namespace MonsterBattleGame
         /// <summary>
         /// ダミーの特性を作成
         /// </summary>
-        public static Trait CreateDummyTrait(string name, List<TraitCondition> conditions = null, List<TraitEffect> effects = null)
+        public static Trait CreateDummyTrait(string name, string description = null)
         {
-            var trait = new Trait(name);
-            if (conditions != null)
-            {
-                trait.Conditions = conditions;
-            }
-            if (effects != null)
-            {
-                trait.Effects = effects;
-            }
-            return trait;
+            return new BasicTrait(name, description ?? $"{name}の説明");
         }
 
         /// <summary>
@@ -179,35 +171,19 @@ namespace MonsterBattleGame
             return new List<Trait>
             {
                 // HP回復型特性
-                CreateDummyTrait(
-                    "自己回復",
-                    new List<TraitCondition> { new TraitCondition(ConditionType.HPBelow, 0.5f) },
-                    new List<TraitEffect> { new TraitEffect(EffectType.Heal, 0.2f) }
-                ),
+                CreateDummyTrait("自己回復", "HPが50%以下になると回復する"),
 
                 // 攻撃強化型特性
-                CreateDummyTrait(
-                    "戦闘態勢",
-                    new List<TraitCondition> { new TraitCondition(ConditionType.HPAbove, 0.8f) },
-                    new List<TraitEffect> { new TraitEffect(EffectType.AttackBoost, 1.1f) }
-                ),
+                CreateDummyTrait("戦闘態勢", "HPが80%以上の時、攻撃力が上がる"),
 
                 // 防御強化型特性
-                CreateDummyTrait(
-                    "堅守",
-                    new List<TraitCondition> { new TraitCondition(ConditionType.HPBelow, 0.3f) },
-                    new List<TraitEffect> { new TraitEffect(EffectType.DefenseBoost, 1.2f) }
-                ),
+                CreateDummyTrait("堅守", "HPが30%以下の時、防御力が上がる"),
 
                 // 素早さ強化型特性
-                CreateDummyTrait(
-                    "俊敏",
-                    new List<TraitCondition>(),
-                    new List<TraitEffect> { new TraitEffect(EffectType.SpeedBoost, 1.1f) }
-                ),
+                CreateDummyTrait("俊敏", "常に素早さが上がる"),
 
                 // 特性なし（ダミー）
-                CreateDummyTrait("なし", new List<TraitCondition>(), new List<TraitEffect>())
+                CreateDummyTrait("なし", "特性なし")
             };
         }
 
@@ -228,7 +204,7 @@ namespace MonsterBattleGame
         /// カスタムモンスターを作成
         /// </summary>
         public static Monster CreateDummyMonster(
-            MonsterSpecies species,
+            Species species,
             int level,
             IndividualValue iv,
             Trait trait,
@@ -381,10 +357,14 @@ namespace MonsterBattleGame
             IndividualValue iv,
             List<Trait> traits,
             Personality personality,
-            History history,
+            Career career,
             List<Skill> skills)
         {
-            return new ClubMember(grade, level, iv, traits, personality, history, skills);
+            // SpeciesとLevelインスタンスを作成
+            Species species = new Species("部員", 100, 50, 50, 50);
+            Level levelInstance = new Level(level, 0);
+            
+            return new ClubMember(species, grade, levelInstance, iv, new EffortValue(), personality, traits, career, skills);
         }
 
         /// <summary>
@@ -394,25 +374,18 @@ namespace MonsterBattleGame
         {
             var iv = CreateAverageIV();
             var traits = new List<Trait> { GetTraitByName("なし") };
-            var personality = new Personality();
-            var history = new History();
+            var personality = Personality.Normal;
+            var career = new Career();
             var skills = CreateDefaultSkillSet();
 
-            // 部員の名前が指定されている場合、ClubMemberSpeciesを作成
-            ClubMemberSpecies species = null;
-            if (!string.IsNullOrEmpty(lastName) || !string.IsNullOrEmpty(firstName))
-            {
-                string fullName = string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName) 
-                    ? "部員" 
-                    : $"{lastName} {firstName}".Trim();
-                species = new ClubMemberSpecies(fullName, 100, 50, 50, 50);
-            }
+            // Speciesを必ず作成
+            string fullName = string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName) 
+                ? "部員" 
+                : $"{lastName} {firstName}".Trim();
+            Species species = new Species(fullName, 100, 50, 50, 50);
+            Level levelInstance = new Level(level, 0);
 
-            var member = new ClubMember(grade, level, iv, traits, personality, history, skills, lastName, firstName);
-            if (species != null)
-            {
-                member.Species = species;
-            }
+            var member = new ClubMember(species, grade, levelInstance, iv, new EffortValue(), personality, traits, career, skills, lastName, firstName);
 
             return member;
         }
@@ -445,11 +418,11 @@ namespace MonsterBattleGame
                 traits.Add(GetTraitByName("なし"));
             }
 
-            var personality = new Personality();
-            var history = new History();
+            var personality = Personality.Normal;
+            var career = new Career();
 
             var allSkills = CreateDefaultSkills();
-            var skillCount = random.Next(3, 5);
+            var skillCount = random.Next(1, 3); // 最大2つに制限
             var skills = new List<Skill>();
             for (int i = 0; i < skillCount; i++)
             {
@@ -460,21 +433,14 @@ namespace MonsterBattleGame
                 }
             }
 
-            // 部員の名前が指定されている場合、ClubMemberSpeciesを作成
-            ClubMemberSpecies species = null;
-            if (!string.IsNullOrEmpty(lastName) || !string.IsNullOrEmpty(firstName))
-            {
-                string fullName = string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName) 
-                    ? "部員" 
-                    : $"{lastName} {firstName}".Trim();
-                species = new ClubMemberSpecies(fullName, 100, 50, 50, 50);
-            }
+            // Speciesを必ず作成
+            string fullName = string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName) 
+                ? "部員" 
+                : $"{lastName} {firstName}".Trim();
+            Species species = new Species(fullName, 100, 50, 50, 50);
+            Level levelInstance = new Level(level, 0);
 
-            var member = new ClubMember(grade, level, iv, traits, personality, history, skills, lastName, firstName);
-            if (species != null)
-            {
-                member.Species = species;
-            }
+            var member = new ClubMember(species, grade, levelInstance, iv, new EffortValue(), personality, traits, career, skills, lastName, firstName);
 
             return member;
         }

@@ -92,8 +92,6 @@ namespace MonsterBattleGame
             }
 
             // 選択肢ボタンを作成
-            Debug.Log($"HasOptions: {HasOptions()}");
-            Debug.Log($"Options: {Options.Length}");
             if (HasOptions())
             {
                 GameObject optionsContainer = new GameObject("OptionsContainer");

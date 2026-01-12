@@ -1,11 +1,11 @@
 namespace MonsterBattleGame
 {
     /// <summary>
-    /// モンスター種別（種族値）
-    /// 種族値（Base Stats）のみを保持する
-    /// 個体値・努力値・レベル・性格補正はMonsterクラスで管理される
+    /// 種別（種族値）
+    /// 種族値（Base Stats）を保持する
+    /// 個体値・努力値・レベル・性格補正は各エンティティクラスで管理される
     /// </summary>
-    public class MonsterSpecies
+    public class Species
     {
         /// <summary>名称</summary>
         public string Name { get; set; }
@@ -22,12 +22,12 @@ namespace MonsterBattleGame
         /// <summary>基礎素早さ（種族値）</summary>
         public int BaseSpeed { get; set; }
 
-        public MonsterSpecies()
+        public Species()
         {
             Name = string.Empty;
         }
 
-        public MonsterSpecies(string name, int baseHP, int baseAttack, int baseDefense, int baseSpeed)
+        public Species(string name, int baseHP, int baseAttack, int baseDefense, int baseSpeed)
         {
             Name = name;
             BaseHP = baseHP;
@@ -37,4 +37,3 @@ namespace MonsterBattleGame
         }
     }
 }
-
